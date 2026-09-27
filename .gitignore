@@ -29,3 +29,6 @@ logs/
 *.h5
 *.pb
 *.tflite
+
+# 发布暂存目录（权重不进 git）
+release/
