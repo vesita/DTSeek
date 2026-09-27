@@ -32,3 +32,6 @@ logs/
 
 # 发布暂存目录（权重不进 git）
 release/
+
+# 实验派生缓存：数据集转储，可由脚本重建（体积大）
+experiments/**/person_val_seed*.json

@@ -1,0 +1,81 @@
+{
+  "arm": "slots32",
+  "seed": 43,
+  "tag": "slots32_seed43",
+  "metrics": {
+    "cls_acc": 1.0,
+    "span_hit": 1.0,
+    "bg_fp": 0.0,
+    "n_cls": 636,
+    "n_bg": 264,
+    "exact_match": 0.30444444444444446,
+    "slice_precision": 0.5814601153769644,
+    "slice_recall": 0.5941056910569106,
+    "id_acc": 0.7108504398826979,
+    "first_mention_acc": 0.8706293706293706,
+    "repeat_mention_acc": 0.3850267379679144,
+    "cluster_f1": 0.37960339943342775,
+    "n_measurable": 3410
+  },
+  "by_kind": {
+    "literal_same_id": {
+      "n": 806,
+      "hit": 302,
+      "acc": 0.3746898263027295
+    },
+    "literal_other_id": {
+      "n": 3,
+      "hit": 3,
+      "acc": 1.0
+    },
+    "alias": {
+      "n": 313,
+      "hit": 127,
+      "acc": 0.4057507987220447
+    }
+  },
+  "bypass_metrics": {
+    "cls_acc": 1.0,
+    "span_hit": 1.0,
+    "bg_fp": 0.0,
+    "n_cls": 636,
+    "n_bg": 264,
+    "exact_match": 0.30444444444444446,
+    "slice_precision": 0.5814601153769644,
+    "slice_recall": 0.5941056910569106,
+    "id_acc": 0.7108504398826979,
+    "first_mention_acc": 0.8706293706293706,
+    "repeat_mention_acc": 0.3850267379679144,
+    "cluster_f1": 0.37960339943342775,
+    "n_measurable": 3410
+  },
+  "n_head_params": 631306,
+  "n_mem_params": 4482,
+  "train_sec": 138.2745233070018,
+  "n_steps": 1200,
+  "sec_per_step": 0.1152287694225015,
+  "peak_mem_mb": 677.3193359375,
+  "grad_info": {
+    "grad_norm_mean_per_step": 0.7881885566062057,
+    "grad_norm_total_sq": 745.4894409179688,
+    "n_grad_steps": 1200,
+    "n_steps_with_nonzero_grad": 1200,
+    "n_param_grad_none": 0,
+    "per_param_last_grad_norm": {
+      "M": 0.0011784862726926804,
+      "W_k": 2.476881127222441e-05,
+      "read_gate.weight": 0.0836549699306488,
+      "read_gate.bias": 0.020491961389780045
+    },
+    "all_grads_nonzero": true
+  },
+  "mem_stats": {
+    "batch": 4,
+    "last_gate": 0.0052581364288926125,
+    "last_covered": 1.0,
+    "n_written": 0,
+    "read_gate_bias": -2.144270181655884,
+    "bypass": false
+  },
+  "first_batch_fingerprint": 2221361.0
+}

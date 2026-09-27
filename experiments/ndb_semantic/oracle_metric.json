@@ -1,0 +1,23 @@
+{
+  "start_surface_cross_doc": 0.2205518945634267,
+  "start_identity_within_doc": 0.1532105760151086,
+  "mean_surface_cross_doc": 0.22714168039538715,
+  "mean_identity_within_doc": 0.1591123701605288,
+  "probe_detail": {
+    "acc": 0.7632958173751831,
+    "auc": 0.7741099715232849,
+    "auc_dw": 0.8099032402038574,
+    "bal": 0.5938543214564259,
+    "base": 0.7470427036285401
+  },
+  "learned_metric": {
+    "alias_nn1_raw": 0.2752016129032258,
+    "alias_nn1_learned": 0.7741935483870968,
+    "alias_n": 992,
+    "prior_alias": 0.3731,
+    "literal_same_id_nn1_learned": 0.838943894389439,
+    "literal_other_id_nn1_learned": 0.37333333333333335
+  },
+  "start2_surface_cross_doc": 0.2269357495881384,
+  "start2_identity_within_doc": 0.1647780925401322
+}

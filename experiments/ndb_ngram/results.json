@@ -1,0 +1,773 @@
+{
+  "harness_check": {
+    "base_seed42_ref": 0.3772683858643744,
+    "base_seed42_this": 0.3772683858643744,
+    "base_seed43_ref": 0.38955087076076994,
+    "base_seed43_this": 0.38955087076076994,
+    "literal_seed42_ref": 0.8407517309594461,
+    "literal_seed42_this": 0.8407517309594461,
+    "literal_seed43_ref": 0.863768115942029,
+    "literal_seed43_this": 0.863768115942029
+  },
+  "runs": {
+    "base_seed42": {
+      "arm": "base",
+      "seed": 42,
+      "tag": "base_seed42",
+      "freeze_mem": false,
+      "rng_aligned": false,
+      "lr_mem": 0.001,
+      "metrics": {
+        "cls_acc": 1.0,
+        "span_hit": 1.0,
+        "bg_fp": 0.0035714285714285713,
+        "n_cls": 620,
+        "n_bg": 280,
+        "exact_match": 0.31222222222222223,
+        "slice_precision": 0.5764971287940935,
+        "slice_recall": 0.5788714991762768,
+        "id_acc": 0.7062575941676792,
+        "first_mention_acc": 0.8596881959910914,
+        "repeat_mention_acc": 0.3772683858643744,
+        "cluster_f1": 0.36583629893238434,
+        "n_measurable": 3292
+      },
+      "bypass_metrics": null,
+      "by_kind": {
+        "literal_same_id": {
+          "n": 773,
+          "hit": 280,
+          "acc": 0.36222509702457956
+        },
+        "literal_other_id": {
+          "n": 1,
+          "hit": 1,
+          "acc": 1.0
+        },
+        "alias": {
+          "n": 273,
+          "hit": 114,
+          "acc": 0.4175824175824176
+        }
+      },
+      "n_head_params": 631306,
+      "n_mem_params": 0,
+      "grad_summary": {
+        "grad_steps": 0
+      },
+      "grad_per_param": {},
+      "train_sec": 120.74692140399566,
+      "n_steps": 1200,
+      "sec_per_step": 0.10062243450332971,
+      "peak_mem_mb": 676.423828125,
+      "mem_stats": {},
+      "log": "base_seed42.log"
+    },
+    "base_seed43": {
+      "arm": "base",
+      "seed": 43,
+      "tag": "base_seed43",
+      "freeze_mem": false,
+      "rng_aligned": false,
+      "lr_mem": 0.001,
+      "metrics": {
+        "cls_acc": 1.0,
+        "span_hit": 1.0,
+        "bg_fp": 0.0,
+        "n_cls": 636,
+        "n_bg": 264,
+        "exact_match": 0.30333333333333334,
+        "slice_precision": 0.5923344947735192,
+        "slice_recall": 0.5873983739837398,
+        "id_acc": 0.7119597394908229,
+        "first_mention_acc": 0.8657630083078268,
+        "repeat_mention_acc": 0.38955087076076994,
+        "cluster_f1": 0.37623133142675563,
+        "n_measurable": 3378
+      },
+      "bypass_metrics": null,
+      "by_kind": {
+        "literal_same_id": {
+          "n": 784,
+          "hit": 301,
+          "acc": 0.38392857142857145
+        },
+        "literal_other_id": {
+          "n": 4,
+          "hit": 4,
+          "acc": 1.0
+        },
+        "alias": {
+          "n": 303,
+          "hit": 120,
+          "acc": 0.39603960396039606
+        }
+      },
+      "n_head_params": 631306,
+      "n_mem_params": 0,
+      "grad_summary": {
+        "grad_steps": 0
+      },
+      "grad_per_param": {},
+      "train_sec": 118.86567183999432,
+      "n_steps": 1200,
+      "sec_per_step": 0.0990547265333286,
+      "peak_mem_mb": 676.423828125,
+      "mem_stats": {},
+      "log": "base_seed43.log"
+    },
+    "literal_seed42": {
+      "arm": "literal",
+      "seed": 42,
+      "tag": "literal_seed42",
+      "freeze_mem": false,
+      "rng_aligned": false,
+      "lr_mem": 0.0003,
+      "metrics": {
+        "cls_acc": 1.0,
+        "span_hit": 1.0,
+        "bg_fp": 0.0,
+        "n_cls": 620,
+        "n_bg": 280,
+        "exact_match": 0.31333333333333335,
+        "slice_precision": 0.8404051464549686,
+        "slice_recall": 0.6322075782537068,
+        "id_acc": 0.9451970443349754,
+        "first_mention_acc": 0.9924005364327224,
+        "repeat_mention_acc": 0.8407517309594461,
+        "cluster_f1": 0.8032659409020217,
+        "n_measurable": 3248
+      },
+      "bypass_metrics": null,
+      "by_kind": {
+        "literal_same_id": {
+          "n": 740,
+          "hit": 730,
+          "acc": 0.9864864864864865
+        },
+        "literal_other_id": {
+          "n": 1,
+          "hit": 0,
+          "acc": 0.0
+        },
+        "alias": {
+          "n": 270,
+          "hit": 120,
+          "acc": 0.4444444444444444
+        }
+      },
+      "n_head_params": 631306,
+      "n_mem_params": 264,
+      "grad_summary": {
+        "grad_steps": 1200,
+        "grad_norm_mean": 4.875987548828125,
+        "grad_norm_max": 30.90016746520996,
+        "grad_nonzero_steps": 1200,
+        "grad_all_nonzero": true
+      },
+      "grad_per_param": {
+        "level_weight": 0.01057001668959856,
+        "write_gate.weight": 0.0009995732689276338,
+        "write_gate.bias": 1.7707679944578558e-07,
+        "read_gate.weight": 2.6469905376434326,
+        "read_gate.bias": 0.001331942155957222
+      },
+      "train_sec": 144.21286185899953,
+      "n_steps": 1200,
+      "sec_per_step": 0.12017738488249961,
+      "peak_mem_mb": 706.17822265625,
+      "mem_stats": {
+        "n_written": 442492,
+        "table_gb": 0.00164794921875,
+        "batch": 4,
+        "last_gate": 0.7333993911743164,
+        "last_covered": 0.75,
+        "alpha": [
+          0.5174892544746399,
+          0.4825107455253601
+        ],
+        "write_gate_bias": 0.9624863266944885,
+        "read_gate_bias": -1.937673568725586,
+        "retrieval_top1_hit": NaN,
+        "retrieval_covered": NaN,
+        "n_retrieval": 0
+      },
+      "log": "literal_seed42.log"
+    },
+    "literal_seed43": {
+      "arm": "literal",
+      "seed": 43,
+      "tag": "literal_seed43",
+      "freeze_mem": false,
+      "rng_aligned": false,
+      "lr_mem": 0.0003,
+      "metrics": {
+        "cls_acc": 1.0,
+        "span_hit": 1.0,
+        "bg_fp": 0.0,
+        "n_cls": 636,
+        "n_bg": 264,
+        "exact_match": 0.30444444444444446,
+        "slice_precision": 0.8617775354416576,
+        "slice_recall": 0.642479674796748,
+        "id_acc": 0.9549848942598187,
+        "first_mention_acc": 0.9964835164835165,
+        "repeat_mention_acc": 0.863768115942029,
+        "cluster_f1": 0.8354243542435424,
+        "n_measurable": 3310
+      },
+      "bypass_metrics": null,
+      "by_kind": {
+        "literal_same_id": {
+          "n": 740,
+          "hit": 732,
+          "acc": 0.9891891891891892
+        },
+        "literal_other_id": {
+          "n": 4,
+          "hit": 1,
+          "acc": 0.25
+        },
+        "alias": {
+          "n": 291,
+          "hit": 161,
+          "acc": 0.5532646048109966
+        }
+      },
+      "n_head_params": 631306,
+      "n_mem_params": 264,
+      "grad_summary": {
+        "grad_steps": 1200,
+        "grad_norm_mean": 4.966522623697917,
+        "grad_norm_max": 25.74054527282715,
+        "grad_nonzero_steps": 1200,
+        "grad_all_nonzero": true
+      },
+      "grad_per_param": {
+        "level_weight": 0.0399983786046505,
+        "write_gate.weight": 0.020785575732588768,
+        "write_gate.bias": 0.002289293799549341,
+        "read_gate.weight": 2.174382209777832,
+        "read_gate.bias": 0.24489256739616394
+      },
+      "train_sec": 137.43582649400196,
+      "n_steps": 1200,
+      "sec_per_step": 0.1145298554116683,
+      "peak_mem_mb": 706.17822265625,
+      "mem_stats": {
+        "n_written": 442293,
+        "table_gb": 0.00164794921875,
+        "batch": 4,
+        "last_gate": 0.4894949793815613,
+        "last_covered": 0.5,
+        "alpha": [
+          0.5155599117279053,
+          0.4844401180744171
+        ],
+        "write_gate_bias": 1.0443530082702637,
+        "read_gate_bias": -1.9503589868545532,
+        "retrieval_top1_hit": NaN,
+        "retrieval_covered": NaN,
+        "n_retrieval": 0
+      },
+      "log": "literal_seed43.log"
+    },
+    "lngtab_lr3e4_seed42": {
+      "arm": "lngtab",
+      "seed": 42,
+      "tag": "lngtab_lr3e4_seed42",
+      "freeze_mem": false,
+      "rng_aligned": true,
+      "lr_mem": 0.0003,
+      "metrics": {
+        "cls_acc": 1.0,
+        "span_hit": 1.0,
+        "bg_fp": 0.0035714285714285713,
+        "n_cls": 620,
+        "n_bg": 280,
+        "exact_match": 0.31333333333333335,
+        "slice_precision": 0.5701790073230268,
+        "slice_recall": 0.5772240527182867,
+        "id_acc": 0.7061336588342997,
+        "first_mention_acc": 0.8558718861209964,
+        "repeat_mention_acc": 0.37900874635568516,
+        "cluster_f1": 0.35364564987671715,
+        "n_measurable": 3277
+      },
+      "bypass_metrics": {
+        "cls_acc": 1.0,
+        "span_hit": 1.0,
+        "bg_fp": 0.0035714285714285713,
+        "n_cls": 620,
+        "n_bg": 280,
+        "exact_match": 0.31333333333333335,
+        "slice_precision": 0.5701790073230268,
+        "slice_recall": 0.5772240527182867,
+        "id_acc": 0.7061336588342997,
+        "first_mention_acc": 0.8558718861209964,
+        "repeat_mention_acc": 0.37900874635568516,
+        "cluster_f1": 0.35364564987671715,
+        "n_measurable": 3277
+      },
+      "by_kind": {
+        "literal_same_id": {
+          "n": 752,
+          "hit": 275,
+          "acc": 0.36569148936170215
+        },
+        "literal_other_id": {
+          "n": 1,
+          "hit": 0,
+          "acc": 0.0
+        },
+        "alias": {
+          "n": 276,
+          "hit": 115,
+          "acc": 0.4166666666666667
+        }
+      },
+      "n_head_params": 631306,
+      "n_mem_params": 98438,
+      "grad_summary": {
+        "grad_steps": 1200,
+        "grad_norm_mean": 0.6552618916829427,
+        "grad_norm_max": 9.313518524169922,
+        "grad_nonzero_steps": 1200,
+        "grad_all_nonzero": true
+      },
+      "grad_per_param": {
+        "level_weight": 8.770271233515814e-05,
+        "read_gate.weight": 0.2865733504295349,
+        "read_gate.bias": 0.034847691655159,
+        "emb.0.weight": 0.004132711328566074,
+        "emb.1.weight": 0.004132789094001055
+      },
+      "train_sec": 138.27035068799887,
+      "n_steps": 1200,
+      "sec_per_step": 0.11522529223999906,
+      "peak_mem_mb": 679.00341796875,
+      "mem_stats": {
+        "mem": "LearnableNGramTable",
+        "n_params": 98438,
+        "last_gate": 0.0042647249065339565
+      },
+      "log": "lngtab_lr3e4_seed42.log"
+    },
+    "lngtab_seed42": {
+      "arm": "lngtab",
+      "seed": 42,
+      "tag": "lngtab_seed42",
+      "freeze_mem": false,
+      "rng_aligned": true,
+      "lr_mem": 0.001,
+      "metrics": {
+        "cls_acc": 1.0,
+        "span_hit": 1.0,
+        "bg_fp": 0.0,
+        "n_cls": 620,
+        "n_bg": 280,
+        "exact_match": 0.31444444444444447,
+        "slice_precision": 0.5678535096642929,
+        "slice_recall": 0.5747528830313015,
+        "id_acc": 0.7009744214372716,
+        "first_mention_acc": 0.8529411764705882,
+        "repeat_mention_acc": 0.3730769230769231,
+        "cluster_f1": 0.36224843858431643,
+        "n_measurable": 3284
+      },
+      "bypass_metrics": {
+        "cls_acc": 1.0,
+        "span_hit": 1.0,
+        "bg_fp": 0.0,
+        "n_cls": 620,
+        "n_bg": 280,
+        "exact_match": 0.31444444444444447,
+        "slice_precision": 0.5678535096642929,
+        "slice_recall": 0.5747528830313015,
+        "id_acc": 0.7009744214372716,
+        "first_mention_acc": 0.8529411764705882,
+        "repeat_mention_acc": 0.3730769230769231,
+        "cluster_f1": 0.36224843858431643,
+        "n_measurable": 3284
+      },
+      "by_kind": {
+        "literal_same_id": {
+          "n": 762,
+          "hit": 268,
+          "acc": 0.35170603674540685
+        },
+        "literal_other_id": {
+          "n": 1,
+          "hit": 0,
+          "acc": 0.0
+        },
+        "alias": {
+          "n": 277,
+          "hit": 120,
+          "acc": 0.4332129963898917
+        }
+      },
+      "n_head_params": 631306,
+      "n_mem_params": 98438,
+      "grad_summary": {
+        "grad_steps": 1200,
+        "grad_norm_mean": 0.5758220418294271,
+        "grad_norm_max": 9.313518524169922,
+        "grad_nonzero_steps": 1200,
+        "grad_all_nonzero": true
+      },
+      "grad_per_param": {
+        "level_weight": 0.00018057387205772102,
+        "read_gate.weight": 0.31304237246513367,
+        "read_gate.bias": 0.02978562004864216,
+        "emb.0.weight": 0.003167112125083804,
+        "emb.1.weight": 0.0034727330785244703
+      },
+      "train_sec": 135.36865544600005,
+      "n_steps": 1200,
+      "sec_per_step": 0.1128072128716667,
+      "peak_mem_mb": 679.00341796875,
+      "mem_stats": {
+        "mem": "LearnableNGramTable",
+        "n_params": 98438,
+        "last_gate": 0.0026285084895789623
+      },
+      "log": "lngtab_seed42.log"
+    },
+    "lngtab_seed43": {
+      "arm": "lngtab",
+      "seed": 43,
+      "tag": "lngtab_seed43",
+      "freeze_mem": false,
+      "rng_aligned": true,
+      "lr_mem": 0.001,
+      "metrics": {
+        "cls_acc": 1.0,
+        "span_hit": 1.0,
+        "bg_fp": 0.0,
+        "n_cls": 636,
+        "n_bg": 264,
+        "exact_match": 0.3,
+        "slice_precision": 0.5819061051783195,
+        "slice_recall": 0.5869918699186992,
+        "id_acc": 0.7138563270213405,
+        "first_mention_acc": 0.872862779482683,
+        "repeat_mention_acc": 0.367112810707457,
+        "cluster_f1": 0.3630790190735695,
+        "n_measurable": 3327
+      },
+      "bypass_metrics": {
+        "cls_acc": 1.0,
+        "span_hit": 1.0,
+        "bg_fp": 0.0,
+        "n_cls": 636,
+        "n_bg": 264,
+        "exact_match": 0.3,
+        "slice_precision": 0.5819061051783195,
+        "slice_recall": 0.5869918699186992,
+        "id_acc": 0.7138563270213405,
+        "first_mention_acc": 0.872862779482683,
+        "repeat_mention_acc": 0.367112810707457,
+        "cluster_f1": 0.3630790190735695,
+        "n_measurable": 3327
+      },
+      "by_kind": {
+        "literal_same_id": {
+          "n": 750,
+          "hit": 267,
+          "acc": 0.356
+        },
+        "literal_other_id": {
+          "n": 3,
+          "hit": 3,
+          "acc": 1.0
+        },
+        "alias": {
+          "n": 293,
+          "hit": 114,
+          "acc": 0.3890784982935154
+        }
+      },
+      "n_head_params": 631306,
+      "n_mem_params": 98438,
+      "grad_summary": {
+        "grad_steps": 1200,
+        "grad_norm_mean": 0.33775472005208335,
+        "grad_norm_max": 4.613813400268555,
+        "grad_nonzero_steps": 1200,
+        "grad_all_nonzero": true
+      },
+      "grad_per_param": {
+        "level_weight": 9.826407222135458e-06,
+        "read_gate.weight": 0.042520422488451004,
+        "read_gate.bias": 0.00936177372932434,
+        "emb.0.weight": 0.0003779458347707987,
+        "emb.1.weight": 0.00039071455830708146
+      },
+      "train_sec": 137.67865821400483,
+      "n_steps": 1200,
+      "sec_per_step": 0.11473221517833736,
+      "peak_mem_mb": 679.00341796875,
+      "mem_stats": {
+        "mem": "LearnableNGramTable",
+        "n_params": 98438,
+        "last_gate": 0.0028491104021668434
+      },
+      "log": "lngtab_seed43.log"
+    },
+    "ngrammer_seed42": {
+      "arm": "ngrammer",
+      "seed": 42,
+      "tag": "ngrammer_seed42",
+      "freeze_mem": false,
+      "rng_aligned": true,
+      "lr_mem": 0.001,
+      "metrics": {
+        "cls_acc": 1.0,
+        "span_hit": 1.0,
+        "bg_fp": 0.0,
+        "n_cls": 620,
+        "n_bg": 280,
+        "exact_match": 0.31555555555555553,
+        "slice_precision": 0.5768346226217855,
+        "slice_recall": 0.568163097199341,
+        "id_acc": 0.6992619926199262,
+        "first_mention_acc": 0.8547237076648841,
+        "repeat_mention_acc": 0.3531746031746032,
+        "cluster_f1": 0.3566559024040187,
+        "n_measurable": 3252
+      },
+      "bypass_metrics": {
+        "cls_acc": 1.0,
+        "span_hit": 1.0,
+        "bg_fp": 0.0,
+        "n_cls": 620,
+        "n_bg": 280,
+        "exact_match": 0.31555555555555553,
+        "slice_precision": 0.5772289660946003,
+        "slice_recall": 0.5679571663920923,
+        "id_acc": 0.6988618886496463,
+        "first_mention_acc": 0.8542780748663101,
+        "repeat_mention_acc": 0.35253227408143,
+        "cluster_f1": 0.3559382848941514,
+        "n_measurable": 3251
+      },
+      "by_kind": {
+        "literal_same_id": {
+          "n": 742,
+          "hit": 245,
+          "acc": 0.330188679245283
+        },
+        "literal_other_id": {
+          "n": 1,
+          "hit": 0,
+          "acc": 0.0
+        },
+        "alias": {
+          "n": 265,
+          "hit": 111,
+          "acc": 0.4188679245283019
+        }
+      },
+      "n_head_params": 631306,
+      "n_mem_params": 393868,
+      "grad_summary": {
+        "grad_steps": 1200,
+        "grad_norm_mean": 1.7241947428385416,
+        "grad_norm_max": 13.27422046661377,
+        "grad_nonzero_steps": 1200,
+        "grad_all_nonzero": true
+      },
+      "grad_per_param": {
+        "read_gate.weight": 1.7467869520187378,
+        "read_gate.bias": 0.1548335999250412,
+        "emb.weight": 0.2777549624443054,
+        "proj.weight": 0.1901680827140808,
+        "proj.bias": 0.1722560077905655
+      },
+      "train_sec": 144.97262227999454,
+      "n_steps": 1200,
+      "sec_per_step": 0.12081051856666211,
+      "peak_mem_mb": 684.939453125,
+      "mem_stats": {
+        "mem": "NGrammerLayer",
+        "n_params": 393868,
+        "last_gate": 0.0175000187009573
+      },
+      "log": "ngrammer_seed42.log"
+    },
+    "ngrammer_seed43": {
+      "arm": "ngrammer",
+      "seed": 43,
+      "tag": "ngrammer_seed43",
+      "freeze_mem": false,
+      "rng_aligned": true,
+      "lr_mem": 0.001,
+      "metrics": {
+        "cls_acc": 1.0,
+        "span_hit": 1.0,
+        "bg_fp": 0.0,
+        "n_cls": 636,
+        "n_bg": 264,
+        "exact_match": 0.3,
+        "slice_precision": 0.5817821782178217,
+        "slice_recall": 0.5971544715447155,
+        "id_acc": 0.7222057515564779,
+        "first_mention_acc": 0.8793706293706294,
+        "repeat_mention_acc": 0.39078341013824885,
+        "cluster_f1": 0.3759148369926813,
+        "n_measurable": 3373
+      },
+      "bypass_metrics": {
+        "cls_acc": 1.0,
+        "span_hit": 1.0,
+        "bg_fp": 0.0,
+        "n_cls": 636,
+        "n_bg": 264,
+        "exact_match": 0.3,
+        "slice_precision": 0.5816488307570353,
+        "slice_recall": 0.5965447154471545,
+        "id_acc": 0.72,
+        "first_mention_acc": 0.8780594405594405,
+        "repeat_mention_acc": 0.3873045078196872,
+        "cluster_f1": 0.373342175066313,
+        "n_measurable": 3375
+      },
+      "by_kind": {
+        "literal_same_id": {
+          "n": 780,
+          "hit": 297,
+          "acc": 0.38076923076923075
+        },
+        "literal_other_id": {
+          "n": 3,
+          "hit": 2,
+          "acc": 0.6666666666666666
+        },
+        "alias": {
+          "n": 302,
+          "hit": 125,
+          "acc": 0.4139072847682119
+        }
+      },
+      "n_head_params": 631306,
+      "n_mem_params": 393868,
+      "grad_summary": {
+        "grad_steps": 1200,
+        "grad_norm_mean": 1.7309847005208334,
+        "grad_norm_max": 10.89433479309082,
+        "grad_nonzero_steps": 1200,
+        "grad_all_nonzero": true
+      },
+      "grad_per_param": {
+        "read_gate.weight": 1.179711103439331,
+        "read_gate.bias": 0.1727183312177658,
+        "emb.weight": 0.16516906023025513,
+        "proj.weight": 0.10907667130231857,
+        "proj.bias": 0.1379217952489853
+      },
+      "train_sec": 143.83202715000516,
+      "n_steps": 1200,
+      "sec_per_step": 0.1198600226250043,
+      "peak_mem_mb": 683.158203125,
+      "mem_stats": {
+        "mem": "NGrammerLayer",
+        "n_params": 393868,
+        "last_gate": 0.048622969537973404
+      },
+      "log": "ngrammer_seed43.log"
+    },
+    "nplm_seed42": {
+      "arm": "nplm",
+      "seed": 42,
+      "tag": "nplm_seed42",
+      "freeze_mem": false,
+      "rng_aligned": true,
+      "lr_mem": 0.001,
+      "metrics": {
+        "cls_acc": 1.0,
+        "span_hit": 1.0,
+        "bg_fp": 0.0,
+        "n_cls": 620,
+        "n_bg": 280,
+        "exact_match": 0.31444444444444447,
+        "slice_precision": 0.5731832139201638,
+        "slice_recall": 0.5766062602965404,
+        "id_acc": 0.7105831533477321,
+        "first_mention_acc": 0.8674698795180723,
+        "repeat_mention_acc": 0.359,
+        "cluster_f1": 0.3433104940497656,
+        "n_measurable": 3241
+      },
+      "bypass_metrics": {
+        "cls_acc": 1.0,
+        "span_hit": 1.0,
+        "bg_fp": 0.0,
+        "n_cls": 620,
+        "n_bg": 280,
+        "exact_match": 0.31444444444444447,
+        "slice_precision": 0.5738880918220947,
+        "slice_recall": 0.5766062602965404,
+        "id_acc": 0.710891700092564,
+        "first_mention_acc": 0.8674698795180723,
+        "repeat_mention_acc": 0.36,
+        "cluster_f1": 0.34547421565091957,
+        "n_measurable": 3241
+      },
+      "by_kind": {
+        "literal_same_id": {
+          "n": 734,
+          "hit": 250,
+          "acc": 0.3405994550408719
+        },
+        "literal_other_id": {
+          "n": 1,
+          "hit": 0,
+          "acc": 0.0
+        },
+        "alias": {
+          "n": 265,
+          "hit": 109,
+          "acc": 0.41132075471698115
+        }
+      },
+      "n_head_params": 631306,
+      "n_mem_params": 279820,
+      "grad_summary": {
+        "grad_steps": 1200,
+        "grad_norm_mean": 3.508885904947917,
+        "grad_norm_max": 16.592693328857422,
+        "grad_nonzero_steps": 1200,
+        "grad_all_nonzero": true
+      },
+      "grad_per_param": {
+        "read_gate.weight": 1.9812167882919312,
+        "read_gate.bias": 0.1776665896177292,
+        "emb.weight": 0.7439767718315125,
+        "fc1.weight": 0.11382093280553818,
+        "fc1.bias": 0.10897935181856155,
+        "fc2.weight": 0.4682076573371887,
+        "fc2.bias": 0.09071527421474457
+      },
+      "train_sec": 139.542734112998,
+      "n_steps": 1200,
+      "sec_per_step": 0.11628561176083167,
+      "peak_mem_mb": 682.4814453125,
+      "mem_stats": {
+        "mem": "FeedForwardNPLM",
+        "n_params": 279820,
+        "last_gate": 0.031097255647182465
+      },
+      "log": "nplm_seed42.log"
+    }
+  },
+  "oracle_global_seed42": {
+    "unigram_repeat_acc": 0.34043377226955845,
+    "bigram_repeat_acc": 0.3474051123160341,
+    "key_coverage": {
+      "unigram": 1.0,
+      "bigram": 1.0
+    },
+    "note": "Bayes-optimal global key->id table, fit on train counts; n_repeat=2582"
+  }
+}

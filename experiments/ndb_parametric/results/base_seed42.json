@@ -1,0 +1,47 @@
+{
+  "arm": "base",
+  "seed": 42,
+  "tag": "base_seed42",
+  "metrics": {
+    "cls_acc": 1.0,
+    "span_hit": 1.0,
+    "bg_fp": 0.0035714285714285713,
+    "n_cls": 620,
+    "n_bg": 280,
+    "exact_match": 0.31222222222222223,
+    "slice_precision": 0.5764971287940935,
+    "slice_recall": 0.5788714991762768,
+    "id_acc": 0.7062575941676792,
+    "first_mention_acc": 0.8596881959910914,
+    "repeat_mention_acc": 0.3772683858643744,
+    "cluster_f1": 0.36583629893238434,
+    "n_measurable": 3292
+  },
+  "by_kind": {
+    "literal_same_id": {
+      "n": 773,
+      "hit": 280,
+      "acc": 0.36222509702457956
+    },
+    "literal_other_id": {
+      "n": 1,
+      "hit": 1,
+      "acc": 1.0
+    },
+    "alias": {
+      "n": 273,
+      "hit": 114,
+      "acc": 0.4175824175824176
+    }
+  },
+  "bypass_metrics": null,
+  "n_head_params": 631306,
+  "n_mem_params": 0,
+  "train_sec": 116.33449802799441,
+  "n_steps": 1200,
+  "sec_per_step": 0.09694541502332868,
+  "peak_mem_mb": 676.4248046875,
+  "grad_info": {},
+  "mem_stats": {},
+  "first_batch_fingerprint": 2226919.0
+}

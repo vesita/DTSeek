@@ -1,0 +1,895 @@
+{
+  "arms": {
+    "base": {
+      "42": {
+        "metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0035714285714285713,
+          "n_cls": 620,
+          "n_bg": 280,
+          "exact_match": 0.31222222222222223,
+          "slice_precision": 0.5764971287940935,
+          "slice_recall": 0.5788714991762768,
+          "id_acc": 0.7062575941676792,
+          "first_mention_acc": 0.8596881959910914,
+          "repeat_mention_acc": 0.3772683858643744,
+          "cluster_f1": 0.36583629893238434,
+          "n_measurable": 3292
+        },
+        "by_kind": {
+          "literal_same_id": {
+            "n": 773,
+            "hit": 280,
+            "acc": 0.36222509702457956
+          },
+          "alias": {
+            "n": 273,
+            "hit": 114,
+            "acc": 0.4175824175824176
+          },
+          "literal_other_id": {
+            "n": 1,
+            "hit": 1,
+            "acc": 1.0
+          }
+        },
+        "n_mem_params": 0,
+        "sec_per_step": 0.08211365683083083,
+        "peak_mem_mb": 676.423828125,
+        "grad_info": {},
+        "bypass_metrics": null,
+        "mem_stats": {}
+      },
+      "43": {
+        "metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 636,
+          "n_bg": 264,
+          "exact_match": 0.30333333333333334,
+          "slice_precision": 0.5923344947735192,
+          "slice_recall": 0.5873983739837398,
+          "id_acc": 0.7119597394908229,
+          "first_mention_acc": 0.8657630083078268,
+          "repeat_mention_acc": 0.38955087076076994,
+          "cluster_f1": 0.37623133142675563,
+          "n_measurable": 3378
+        },
+        "by_kind": {
+          "literal_same_id": {
+            "n": 784,
+            "hit": 301,
+            "acc": 0.38392857142857145
+          },
+          "alias": {
+            "n": 303,
+            "hit": 120,
+            "acc": 0.39603960396039606
+          },
+          "literal_other_id": {
+            "n": 4,
+            "hit": 4,
+            "acc": 1.0
+          }
+        },
+        "n_mem_params": 0,
+        "sec_per_step": 0.08123744639249708,
+        "peak_mem_mb": 676.423828125,
+        "grad_info": {},
+        "bypass_metrics": null,
+        "mem_stats": {}
+      }
+    },
+    "literal": {
+      "42": {
+        "metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 620,
+          "n_bg": 280,
+          "exact_match": 0.31333333333333335,
+          "slice_precision": 0.8404051464549686,
+          "slice_recall": 0.6322075782537068,
+          "id_acc": 0.9451970443349754,
+          "first_mention_acc": 0.9924005364327224,
+          "repeat_mention_acc": 0.8407517309594461,
+          "cluster_f1": 0.8032659409020217,
+          "n_measurable": 3248
+        },
+        "by_kind": {
+          "literal_same_id": {
+            "n": 740,
+            "hit": 730,
+            "acc": 0.9864864864864865
+          },
+          "alias": {
+            "n": 270,
+            "hit": 120,
+            "acc": 0.4444444444444444
+          },
+          "literal_other_id": {
+            "n": 1,
+            "hit": 0,
+            "acc": 0.0
+          }
+        },
+        "n_mem_params": 264,
+        "sec_per_step": 0.10605240966083027,
+        "peak_mem_mb": 705.81298828125,
+        "grad_info": {},
+        "bypass_metrics": null,
+        "mem_stats": {
+          "n_written": 432775,
+          "table_gb": 0.00164794921875,
+          "batch": 4,
+          "last_gate": 0.7333993911743164,
+          "last_covered": 0.75,
+          "alpha": [
+            0.5174892544746399,
+            0.4825107455253601
+          ],
+          "write_gate_bias": 0.9624863266944885,
+          "read_gate_bias": -1.937673568725586,
+          "retrieval_top1_hit": NaN,
+          "retrieval_covered": NaN,
+          "n_retrieval": 0
+        }
+      },
+      "43": {
+        "metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 636,
+          "n_bg": 264,
+          "exact_match": 0.30444444444444446,
+          "slice_precision": 0.8617775354416576,
+          "slice_recall": 0.642479674796748,
+          "id_acc": 0.9549848942598187,
+          "first_mention_acc": 0.9964835164835165,
+          "repeat_mention_acc": 0.863768115942029,
+          "cluster_f1": 0.8354243542435424,
+          "n_measurable": 3310
+        },
+        "by_kind": {
+          "literal_same_id": {
+            "n": 740,
+            "hit": 732,
+            "acc": 0.9891891891891892
+          },
+          "alias": {
+            "n": 291,
+            "hit": 161,
+            "acc": 0.5532646048109966
+          },
+          "literal_other_id": {
+            "n": 4,
+            "hit": 1,
+            "acc": 0.25
+          }
+        },
+        "n_mem_params": 264,
+        "sec_per_step": 0.10858731639666075,
+        "peak_mem_mb": 705.81298828125,
+        "grad_info": {},
+        "bypass_metrics": null,
+        "mem_stats": {
+          "n_written": 432465,
+          "table_gb": 0.00164794921875,
+          "batch": 4,
+          "last_gate": 0.4894949793815613,
+          "last_covered": 0.5,
+          "alpha": [
+            0.5155599117279053,
+            0.4844401180744171
+          ],
+          "write_gate_bias": 1.0443530082702637,
+          "read_gate_bias": -1.9503589868545532,
+          "retrieval_top1_hit": NaN,
+          "retrieval_covered": NaN,
+          "n_retrieval": 0
+        }
+      }
+    },
+    "slots16": {
+      "42": {
+        "metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 620,
+          "n_bg": 280,
+          "exact_match": 0.31333333333333335,
+          "slice_precision": 0.5607178464606182,
+          "slice_recall": 0.5790774299835255,
+          "id_acc": 0.69674870859921,
+          "first_mention_acc": 0.858540925266904,
+          "repeat_mention_acc": 0.3480345158197507,
+          "cluster_f1": 0.34230355220667386,
+          "n_measurable": 3291
+        },
+        "by_kind": {
+          "literal_same_id": {
+            "n": 772,
+            "hit": 250,
+            "acc": 0.3238341968911917
+          },
+          "literal_other_id": {
+            "n": 1,
+            "hit": 1,
+            "acc": 1.0
+          },
+          "alias": {
+            "n": 270,
+            "hit": 112,
+            "acc": 0.4148148148148148
+          }
+        },
+        "n_mem_params": 2306,
+        "sec_per_step": 0.10839892108333515,
+        "peak_mem_mb": 677.2275390625,
+        "grad_info": {
+          "grad_norm_mean_per_step": 1.001175304203062,
+          "grad_norm_total_sq": 1202.8223876953125,
+          "n_grad_steps": 1200,
+          "n_steps_with_nonzero_grad": 1200,
+          "n_param_grad_none": 0,
+          "per_param_last_grad_norm": {
+            "M": 0.00485455384477973,
+            "W_k": 9.564453648636118e-05,
+            "read_gate.weight": 0.39558616280555725,
+            "read_gate.bias": 0.04613853991031647
+          },
+          "all_grads_nonzero": true
+        },
+        "bypass_metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 620,
+          "n_bg": 280,
+          "exact_match": 0.31333333333333335,
+          "slice_precision": 0.5607178464606182,
+          "slice_recall": 0.5790774299835255,
+          "id_acc": 0.69674870859921,
+          "first_mention_acc": 0.858540925266904,
+          "repeat_mention_acc": 0.3480345158197507,
+          "cluster_f1": 0.34230355220667386,
+          "n_measurable": 3291
+        },
+        "mem_stats": {
+          "batch": 4,
+          "last_gate": 0.003990712575614452,
+          "last_covered": 1.0,
+          "n_written": 0,
+          "read_gate_bias": -2.1399266719818115,
+          "bypass": false
+        }
+      },
+      "43": {
+        "metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 636,
+          "n_bg": 264,
+          "exact_match": 0.3022222222222222,
+          "slice_precision": 0.5901239585450112,
+          "slice_recall": 0.5902439024390244,
+          "id_acc": 0.7188414277355178,
+          "first_mention_acc": 0.879528590135312,
+          "repeat_mention_acc": 0.3921916592724046,
+          "cluster_f1": 0.38209876543209875,
+          "n_measurable": 3418
+        },
+        "by_kind": {
+          "literal_same_id": {
+            "n": 806,
+            "hit": 295,
+            "acc": 0.36600496277915634
+          },
+          "literal_other_id": {
+            "n": 4,
+            "hit": 2,
+            "acc": 0.5
+          },
+          "alias": {
+            "n": 317,
+            "hit": 145,
+            "acc": 0.45741324921135645
+          }
+        },
+        "n_mem_params": 2306,
+        "sec_per_step": 0.11220414328666568,
+        "peak_mem_mb": 677.2275390625,
+        "grad_info": {
+          "grad_norm_mean_per_step": 0.7116589316931207,
+          "grad_norm_total_sq": 607.7501220703125,
+          "n_grad_steps": 1200,
+          "n_steps_with_nonzero_grad": 1200,
+          "n_param_grad_none": 0,
+          "per_param_last_grad_norm": {
+            "M": 0.001881140167824924,
+            "W_k": 3.6051082133781165e-05,
+            "read_gate.weight": 0.07318990677595139,
+            "read_gate.bias": 0.01876857504248619
+          },
+          "all_grads_nonzero": true
+        },
+        "bypass_metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 636,
+          "n_bg": 264,
+          "exact_match": 0.3022222222222222,
+          "slice_precision": 0.5901239585450112,
+          "slice_recall": 0.5902439024390244,
+          "id_acc": 0.7188414277355178,
+          "first_mention_acc": 0.879528590135312,
+          "repeat_mention_acc": 0.3921916592724046,
+          "cluster_f1": 0.38209876543209875,
+          "n_measurable": 3418
+        },
+        "mem_stats": {
+          "batch": 4,
+          "last_gate": 0.00480444123968482,
+          "last_covered": 1.0,
+          "n_written": 0,
+          "read_gate_bias": -2.1451656818389893,
+          "bypass": false
+        }
+      }
+    },
+    "slots32": {
+      "42": {
+        "metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 620,
+          "n_bg": 280,
+          "exact_match": 0.31333333333333335,
+          "slice_precision": 0.5691023814370039,
+          "slice_recall": 0.5757825370675453,
+          "id_acc": 0.6985138004246284,
+          "first_mention_acc": 0.8583518930957684,
+          "repeat_mention_acc": 0.3574144486692015,
+          "cluster_f1": 0.34779590419993056,
+          "n_measurable": 3297
+        },
+        "by_kind": {
+          "literal_same_id": {
+            "n": 774,
+            "hit": 263,
+            "acc": 0.3397932816537468
+          },
+          "literal_other_id": {
+            "n": 1,
+            "hit": 1,
+            "acc": 1.0
+          },
+          "alias": {
+            "n": 277,
+            "hit": 112,
+            "acc": 0.4043321299638989
+          }
+        },
+        "n_mem_params": 4482,
+        "sec_per_step": 0.11452021076500386,
+        "peak_mem_mb": 677.3193359375,
+        "grad_info": {
+          "grad_norm_mean_per_step": 0.9295047526970791,
+          "grad_norm_total_sq": 1036.77490234375,
+          "n_grad_steps": 1200,
+          "n_steps_with_nonzero_grad": 1200,
+          "n_param_grad_none": 0,
+          "per_param_last_grad_norm": {
+            "M": 0.0034161715302616358,
+            "W_k": 7.540485239587724e-05,
+            "read_gate.weight": 0.3667695224285126,
+            "read_gate.bias": 0.044247619807720184
+          },
+          "all_grads_nonzero": true
+        },
+        "bypass_metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 620,
+          "n_bg": 280,
+          "exact_match": 0.31333333333333335,
+          "slice_precision": 0.5691023814370039,
+          "slice_recall": 0.5757825370675453,
+          "id_acc": 0.6985138004246284,
+          "first_mention_acc": 0.8583518930957684,
+          "repeat_mention_acc": 0.3574144486692015,
+          "cluster_f1": 0.34779590419993056,
+          "n_measurable": 3297
+        },
+        "mem_stats": {
+          "batch": 4,
+          "last_gate": 0.004559812135994434,
+          "last_covered": 1.0,
+          "n_written": 0,
+          "read_gate_bias": -2.139033555984497,
+          "bypass": false
+        }
+      },
+      "43": {
+        "metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 636,
+          "n_bg": 264,
+          "exact_match": 0.30444444444444446,
+          "slice_precision": 0.5814601153769644,
+          "slice_recall": 0.5941056910569106,
+          "id_acc": 0.7108504398826979,
+          "first_mention_acc": 0.8706293706293706,
+          "repeat_mention_acc": 0.3850267379679144,
+          "cluster_f1": 0.37960339943342775,
+          "n_measurable": 3410
+        },
+        "by_kind": {
+          "literal_same_id": {
+            "n": 806,
+            "hit": 302,
+            "acc": 0.3746898263027295
+          },
+          "literal_other_id": {
+            "n": 3,
+            "hit": 3,
+            "acc": 1.0
+          },
+          "alias": {
+            "n": 313,
+            "hit": 127,
+            "acc": 0.4057507987220447
+          }
+        },
+        "n_mem_params": 4482,
+        "sec_per_step": 0.1152287694225015,
+        "peak_mem_mb": 677.3193359375,
+        "grad_info": {
+          "grad_norm_mean_per_step": 0.7881885566062057,
+          "grad_norm_total_sq": 745.4894409179688,
+          "n_grad_steps": 1200,
+          "n_steps_with_nonzero_grad": 1200,
+          "n_param_grad_none": 0,
+          "per_param_last_grad_norm": {
+            "M": 0.0011784862726926804,
+            "W_k": 2.476881127222441e-05,
+            "read_gate.weight": 0.0836549699306488,
+            "read_gate.bias": 0.020491961389780045
+          },
+          "all_grads_nonzero": true
+        },
+        "bypass_metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 636,
+          "n_bg": 264,
+          "exact_match": 0.30444444444444446,
+          "slice_precision": 0.5814601153769644,
+          "slice_recall": 0.5941056910569106,
+          "id_acc": 0.7108504398826979,
+          "first_mention_acc": 0.8706293706293706,
+          "repeat_mention_acc": 0.3850267379679144,
+          "cluster_f1": 0.37960339943342775,
+          "n_measurable": 3410
+        },
+        "mem_stats": {
+          "batch": 4,
+          "last_gate": 0.0052581364288926125,
+          "last_covered": 1.0,
+          "n_written": 0,
+          "read_gate_bias": -2.144270181655884,
+          "bypass": false
+        }
+      }
+    },
+    "diffwrite": {},
+    "fastweight": {
+      "42": {
+        "metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 620,
+          "n_bg": 280,
+          "exact_match": 0.31333333333333335,
+          "slice_precision": 0.5696982139191131,
+          "slice_recall": 0.5714579901153213,
+          "id_acc": 0.7082179132040628,
+          "first_mention_acc": 0.8599464763603925,
+          "repeat_mention_acc": 0.37040714995034757,
+          "cluster_f1": 0.3621250451752801,
+          "n_measurable": 3249
+        },
+        "by_kind": {
+          "literal_same_id": {
+            "n": 746,
+            "hit": 263,
+            "acc": 0.35254691689008044
+          },
+          "literal_other_id": {
+            "n": 1,
+            "hit": 1,
+            "acc": 1.0
+          },
+          "alias": {
+            "n": 260,
+            "hit": 109,
+            "acc": 0.41923076923076924
+          }
+        },
+        "n_mem_params": 9476,
+        "sec_per_step": 0.11960315943582828,
+        "peak_mem_mb": 682.3310546875,
+        "grad_info": {
+          "grad_norm_mean_per_step": 23.161763569872367,
+          "grad_norm_total_sq": 643760.75,
+          "n_grad_steps": 1200,
+          "n_steps_with_nonzero_grad": 1200,
+          "n_param_grad_none": 0,
+          "per_param_last_grad_norm": {
+            "W_k": 1.3488328456878662,
+            "W_q": 2.3468475341796875,
+            "W_v": 12.019484519958496,
+            "write_gate.weight": 0.5120546221733093,
+            "write_gate.bias": 0.0761088877916336,
+            "read_gate.weight": 7.589731216430664,
+            "read_gate.bias": 0.24751095473766327
+          },
+          "all_grads_nonzero": true
+        },
+        "bypass_metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 620,
+          "n_bg": 280,
+          "exact_match": 0.31333333333333335,
+          "slice_precision": 0.5774165953806673,
+          "slice_recall": 0.556013179571664,
+          "id_acc": 0.7106646058732612,
+          "first_mention_acc": 0.8581623550401427,
+          "repeat_mention_acc": 0.3776435045317221,
+          "cluster_f1": 0.38576512455516015,
+          "n_measurable": 3235
+        },
+        "mem_stats": {
+          "batch": 4,
+          "last_gate": 0.10334053635597229,
+          "last_covered": 1.0,
+          "n_written": 0,
+          "read_gate_bias": -2.0213704109191895,
+          "bypass": false
+        }
+      },
+      "43": {
+        "metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 636,
+          "n_bg": 264,
+          "exact_match": 0.30333333333333334,
+          "slice_precision": 0.5924481838703057,
+          "slice_recall": 0.5867886178861789,
+          "id_acc": 0.7162804515745692,
+          "first_mention_acc": 0.8653257542632269,
+          "repeat_mention_acc": 0.40037071362372567,
+          "cluster_f1": 0.399872245289045,
+          "n_measurable": 3366
+        },
+        "by_kind": {
+          "literal_same_id": {
+            "n": 774,
+            "hit": 295,
+            "acc": 0.38113695090439276
+          },
+          "literal_other_id": {
+            "n": 4,
+            "hit": 3,
+            "acc": 0.75
+          },
+          "alias": {
+            "n": 301,
+            "hit": 134,
+            "acc": 0.44518272425249167
+          }
+        },
+        "n_mem_params": 9476,
+        "sec_per_step": 0.1197907287933352,
+        "peak_mem_mb": 682.3310546875,
+        "grad_info": {
+          "grad_norm_mean_per_step": 26.470603781994345,
+          "grad_norm_total_sq": 840831.4375,
+          "n_grad_steps": 1200,
+          "n_steps_with_nonzero_grad": 1200,
+          "n_param_grad_none": 0,
+          "per_param_last_grad_norm": {
+            "W_k": 0.5188851952552795,
+            "W_q": 0.3719172179698944,
+            "W_v": 5.914209365844727,
+            "write_gate.weight": 0.2363416701555252,
+            "write_gate.bias": 0.030142098665237427,
+            "read_gate.weight": 5.610788345336914,
+            "read_gate.bias": 0.2467404305934906
+          },
+          "all_grads_nonzero": true
+        },
+        "bypass_metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 636,
+          "n_bg": 264,
+          "exact_match": 0.3022222222222222,
+          "slice_precision": 0.598554114395067,
+          "slice_recall": 0.5721544715447154,
+          "id_acc": 0.7177275431290898,
+          "first_mention_acc": 0.8708971553610503,
+          "repeat_mention_acc": 0.39275766016713093,
+          "cluster_f1": 0.41069723018147086,
+          "n_measurable": 3362
+        },
+        "mem_stats": {
+          "batch": 4,
+          "last_gate": 0.0758809745311737,
+          "last_covered": 1.0,
+          "n_written": 0,
+          "read_gate_bias": -2.0259594917297363,
+          "bypass": false
+        }
+      }
+    },
+    "fastweight_cls": {
+      "42": {
+        "metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 620,
+          "n_bg": 280,
+          "exact_match": 0.31666666666666665,
+          "slice_precision": 0.5580144777662875,
+          "slice_recall": 0.5556013179571664,
+          "id_acc": 0.6927322907083716,
+          "first_mention_acc": 0.8463599821348816,
+          "repeat_mention_acc": 0.3561643835616438,
+          "cluster_f1": 0.3652591829728802,
+          "n_measurable": 3261
+        },
+        "by_kind": {
+          "literal_same_id": {
+            "n": 752,
+            "hit": 258,
+            "acc": 0.34308510638297873
+          },
+          "literal_other_id": {
+            "n": 0,
+            "hit": 0,
+            "acc": 0.0
+          },
+          "alias": {
+            "n": 270,
+            "hit": 106,
+            "acc": 0.3925925925925926
+          }
+        },
+        "n_mem_params": 9476,
+        "sec_per_step": 0.11625388815583695,
+        "peak_mem_mb": 682.20654296875,
+        "grad_info": {
+          "grad_norm_mean_per_step": 17.44669037979219,
+          "grad_norm_total_sq": 365264.40625,
+          "n_grad_steps": 1200,
+          "n_steps_with_nonzero_grad": 1200,
+          "n_param_grad_none": 1200,
+          "per_param_last_grad_norm": {
+            "W_k": 9.014835357666016,
+            "W_q": 6.101556301116943,
+            "W_v": -1.0,
+            "write_gate.weight": 5.1139140129089355,
+            "write_gate.bias": 0.31008127331733704,
+            "read_gate.weight": 6.296742916107178,
+            "read_gate.bias": 0.6290643215179443
+          },
+          "all_grads_nonzero": false
+        },
+        "bypass_metrics": {
+          "cls_acc": 1.0,
+          "span_hit": 1.0,
+          "bg_fp": 0.0,
+          "n_cls": 620,
+          "n_bg": 280,
+          "exact_match": 0.31666666666666665,
+          "slice_precision": 0.5410186625194401,
+          "slice_recall": 0.5731054365733114,
+          "id_acc": 0.6911764705882353,
+          "first_mention_acc": 0.8441268423403305,
+          "repeat_mention_acc": 0.3570731707317073,
+          "cluster_f1": 0.3412587412587413,
+          "n_measurable": 3264
+        },
+        "mem_stats": {
+          "batch": 4,
+          "last_gate": 0.16315633058547974,
+          "last_covered": 0.75,
+          "n_written": 442600,
+          "read_gate_bias": -1.9814090728759766,
+          "bypass": false
+        }
+      }
+    }
+  },
+  "gpu_note": "=== slots16 seed=42 ===\n2026/09/27 19:40:36.042, 3174 MiB, 51 %\n=== slots16 seed=43 ===\n2026/09/27 19:43:12.074, 3144 MiB, 27 %\n=== slots32 seed=42 ===\n2026/09/27 19:45:50.595, 3115 MiB, 15 %\n=== slots32 seed=43 ===\n2026/09/27 19:48:30.782, 3168 MiB, 25 %\n=== diffwrite seed=42 ===\n2026/09/27 19:51:12.995, 2240 MiB, 6 %\n=== diffwrite seed=43 ===\n2026/09/27 19:51:17.209, 3116 MiB, 12 %\n=== fastweight seed=42 ===\n2026/09/27 19:51:21.244, 3121 MiB, 49 %\n=== fastweight seed=43 ===\n2026/09/27 19:54:03.440, 2400 MiB, 8 %\n=== fastweight_cls seed=42 ===\n2026/09/27 19:56:50.243, 2271 MiB, 3 %\n=== fastweight_cls seed=43 ===\n2026/09/27 19:59:32.414, 2274 MiB, 3 %\n=== diffwrite seed=42 (rerun) ===\n2026/09/27 20:00:40.046, 3109 MiB, 52 %\n=== diffwrite seed=42 (rerun) ===\n2026/09/27 20:00:47.612, 2266 MiB, 2 %\n=== diffwrite seed=42 attempt=1 ===\n2026/09/27 20:01:44.424, 2246 MiB, 2 %",
+  "deltas": {
+    "slots16": {
+      "vs_base_repeat_mention_acc": [
+        -0.02923387004462369,
+        0.002640788511634684
+      ],
+      "vs_base_first_mention_acc": [
+        -0.0011472707241874103,
+        0.013765581827485218
+      ],
+      "vs_base_id_acc": [
+        -0.009508885568469183,
+        0.006881688244694928
+      ],
+      "vs_base_cluster_f1": [
+        -0.023532746725710485,
+        0.0058674340053431195
+      ],
+      "vs_base_bg_fp": [
+        -0.0035714285714285713,
+        0.0
+      ],
+      "vs_literal_repeat_mention_acc": [
+        -0.4927172151396954,
+        -0.47157645666962433
+      ],
+      "vs_literal_first_mention_acc": [
+        -0.13385961116581846,
+        -0.11695492634820448
+      ],
+      "vs_literal_id_acc": [
+        -0.2484483357357654,
+        -0.23614346652430085
+      ],
+      "vs_literal_cluster_f1": [
+        -0.4609623886953479,
+        -0.4533255888114437
+      ],
+      "vs_literal_bg_fp": [
+        0.0,
+        0.0
+      ]
+    },
+    "slots32": {
+      "vs_base_repeat_mention_acc": [
+        -0.019853937195172866,
+        -0.0045241327928555175
+      ],
+      "vs_base_first_mention_acc": [
+        -0.0013363028953229383,
+        0.0048663623215438045
+      ],
+      "vs_base_id_acc": [
+        -0.007743793743050786,
+        -0.0011092996081250028
+      ],
+      "vs_base_cluster_f1": [
+        -0.01804039473245378,
+        0.003372068006672113
+      ],
+      "vs_base_bg_fp": [
+        -0.0035714285714285713,
+        0.0
+      ],
+      "vs_literal_repeat_mention_acc": [
+        -0.4833372822902446,
+        -0.47874137797411453
+      ],
+      "vs_literal_first_mention_acc": [
+        -0.134048643336954,
+        -0.1258541458541459
+      ],
+      "vs_literal_id_acc": [
+        -0.24668324391034702,
+        -0.24413445437712078
+      ],
+      "vs_literal_cluster_f1": [
+        -0.4554700367020912,
+        -0.4558209548101147
+      ],
+      "vs_literal_bg_fp": [
+        0.0,
+        0.0
+      ]
+    },
+    "fastweight": {
+      "vs_base_repeat_mention_acc": [
+        -0.00686123591402682,
+        0.01081984286295573
+      ],
+      "vs_base_first_mention_acc": [
+        0.00025828036930108933,
+        -0.0004372540445999329
+      ],
+      "vs_base_id_acc": [
+        0.0019603190363836065,
+        0.004320712083746292
+      ],
+      "vs_base_cluster_f1": [
+        -0.003711253757104238,
+        0.023640913862289392
+      ],
+      "vs_base_bg_fp": [
+        -0.0035714285714285713,
+        0.0
+      ],
+      "vs_literal_repeat_mention_acc": [
+        -0.47034458100909854,
+        -0.4633974023183033
+      ],
+      "vs_literal_first_mention_acc": [
+        -0.13245406007232996,
+        -0.13115776222028963
+      ],
+      "vs_literal_id_acc": [
+        -0.23697913113091262,
+        -0.23870444268524948
+      ],
+      "vs_literal_cluster_f1": [
+        -0.44114089572674164,
+        -0.4355521089544974
+      ],
+      "vs_literal_bg_fp": [
+        0.0,
+        0.0
+      ]
+    },
+    "fastweight_cls": {
+      "vs_base_repeat_mention_acc": [
+        -0.021104002302730573
+      ],
+      "vs_base_first_mention_acc": [
+        -0.013328213856209747
+      ],
+      "vs_base_id_acc": [
+        -0.01352530345930758
+      ],
+      "vs_base_cluster_f1": [
+        -0.0005771159595041597
+      ],
+      "vs_base_bg_fp": [
+        -0.0035714285714285713
+      ],
+      "vs_literal_repeat_mention_acc": [
+        -0.4845873473978023
+      ],
+      "vs_literal_first_mention_acc": [
+        -0.1460405542978408
+      ],
+      "vs_literal_id_acc": [
+        -0.2524647536266038
+      ],
+      "vs_literal_cluster_f1": [
+        -0.43800675792914157
+      ],
+      "vs_literal_bg_fp": [
+        0.0
+      ]
+    }
+  }
+}

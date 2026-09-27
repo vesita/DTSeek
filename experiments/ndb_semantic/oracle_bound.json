@@ -1,0 +1,87 @@
+{
+  "seed": 42,
+  "n_val": 900,
+  "n_repeat": 2582,
+  "kinds": {
+    "literal_same_id": 1515,
+    "alias": 992,
+    "literal_other_id": 75
+  },
+  "alias_ratio": 0.3841982958946553,
+  "prior_all": 0.3394628458726057,
+  "prior_alias": 0.37311863483738483,
+  "features": {
+    "start|alias": {
+      "n": 992,
+      "nn1_recall": 0.25,
+      "nn3_recall": 0.8306451612903226,
+      "random_proj_nn1": 0.25,
+      "prior": 0.37311863483738483
+    },
+    "start|all_repeat": {
+      "n": 2582,
+      "nn1_recall": 0.25135553834237023,
+      "nn3_recall": 0.7730441518202944,
+      "random_proj_nn1": 0.25135553834237023,
+      "prior": 0.3394628458726057
+    },
+    "mean|alias": {
+      "n": 992,
+      "nn1_recall": 0.2752016129032258,
+      "nn3_recall": 0.8528225806451613,
+      "random_proj_nn1": 0.2752016129032258,
+      "prior": 0.37311863483738483
+    },
+    "mean|all_repeat": {
+      "n": 2582,
+      "nn1_recall": 0.26103795507358635,
+      "nn3_recall": 0.784275755228505,
+      "random_proj_nn1": 0.26103795507358635,
+      "prior": 0.3394628458726057
+    }
+  },
+  "vq": {
+    "K64|alias": {
+      "n": 992,
+      "coverage": 0.01310483870967742,
+      "top1_given_cov": 0.07692307692307693,
+      "recall": 0.0010080645161290322
+    },
+    "K64|all_repeat": {
+      "n": 2582,
+      "coverage": 0.008907823392718823,
+      "top1_given_cov": 0.17391304347826086,
+      "recall": 0.001549186676994578
+    },
+    "K256|alias": {
+      "n": 992,
+      "coverage": 0.0020161290322580645,
+      "top1_given_cov": 0.0,
+      "recall": 0.0
+    },
+    "K256|all_repeat": {
+      "n": 2582,
+      "coverage": 0.0011618900077459333,
+      "top1_given_cov": 0.0,
+      "recall": 0.0
+    },
+    "K1024|alias": {
+      "n": 992,
+      "coverage": 0.0010080645161290322,
+      "top1_given_cov": 0.0,
+      "recall": 0.0
+    },
+    "K1024|all_repeat": {
+      "n": 2582,
+      "coverage": 0.0003872966692486445,
+      "top1_given_cov": 0.0,
+      "recall": 0.0
+    }
+  },
+  "upper_bound": {
+    "literal_only_recall_upper": 0.5867544539116963,
+    "semantic_union_recall_upper": 0.6924864446165763,
+    "best_alias_nn1": 0.2752016129032258,
+    "note": "上界 = 数据侧可检索比例，不含门控/训练损失；实际 acc 只会更低"
+  }
+}

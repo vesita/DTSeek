@@ -1,0 +1,84 @@
+{
+  "arm": "fastweight",
+  "seed": 43,
+  "tag": "fastweight_seed43",
+  "metrics": {
+    "cls_acc": 1.0,
+    "span_hit": 1.0,
+    "bg_fp": 0.0,
+    "n_cls": 636,
+    "n_bg": 264,
+    "exact_match": 0.30333333333333334,
+    "slice_precision": 0.5924481838703057,
+    "slice_recall": 0.5867886178861789,
+    "id_acc": 0.7162804515745692,
+    "first_mention_acc": 0.8653257542632269,
+    "repeat_mention_acc": 0.40037071362372567,
+    "cluster_f1": 0.399872245289045,
+    "n_measurable": 3366
+  },
+  "by_kind": {
+    "literal_same_id": {
+      "n": 774,
+      "hit": 295,
+      "acc": 0.38113695090439276
+    },
+    "literal_other_id": {
+      "n": 4,
+      "hit": 3,
+      "acc": 0.75
+    },
+    "alias": {
+      "n": 301,
+      "hit": 134,
+      "acc": 0.44518272425249167
+    }
+  },
+  "bypass_metrics": {
+    "cls_acc": 1.0,
+    "span_hit": 1.0,
+    "bg_fp": 0.0,
+    "n_cls": 636,
+    "n_bg": 264,
+    "exact_match": 0.3022222222222222,
+    "slice_precision": 0.598554114395067,
+    "slice_recall": 0.5721544715447154,
+    "id_acc": 0.7177275431290898,
+    "first_mention_acc": 0.8708971553610503,
+    "repeat_mention_acc": 0.39275766016713093,
+    "cluster_f1": 0.41069723018147086,
+    "n_measurable": 3362
+  },
+  "n_head_params": 631306,
+  "n_mem_params": 9476,
+  "train_sec": 143.74887455200223,
+  "n_steps": 1200,
+  "sec_per_step": 0.1197907287933352,
+  "peak_mem_mb": 682.3310546875,
+  "grad_info": {
+    "grad_norm_mean_per_step": 26.470603781994345,
+    "grad_norm_total_sq": 840831.4375,
+    "n_grad_steps": 1200,
+    "n_steps_with_nonzero_grad": 1200,
+    "n_param_grad_none": 0,
+    "per_param_last_grad_norm": {
+      "W_k": 0.5188851952552795,
+      "W_q": 0.3719172179698944,
+      "W_v": 5.914209365844727,
+      "write_gate.weight": 0.2363416701555252,
+      "write_gate.bias": 0.030142098665237427,
+      "read_gate.weight": 5.610788345336914,
+      "read_gate.bias": 0.2467404305934906
+    },
+    "all_grads_nonzero": true
+  },
+  "mem_stats": {
+    "batch": 4,
+    "last_gate": 0.0758809745311737,
+    "last_covered": 1.0,
+    "n_written": 0,
+    "read_gate_bias": -2.0259594917297363,
+    "bypass": false
+  },
+  "first_batch_fingerprint": 2221361.0
+}

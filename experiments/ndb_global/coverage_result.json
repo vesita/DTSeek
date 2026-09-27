@@ -1,0 +1,32 @@
+{
+  "idiom": {
+    "task": "idiom",
+    "n_probe_units": 2214,
+    "n_lexicon": 2214,
+    "n_dataset": 14000,
+    "covered_all": 2214,
+    "covered_train": 2212,
+    "never_labeled_all": [],
+    "never_labeled_train": [
+      "晴空万里",
+      "点头称是"
+    ],
+    "never_literal_train": [
+      "晴空万里",
+      "点头称是"
+    ]
+  },
+  "relation": {
+    "task": "relation",
+    "n_probe_pairs": 539,
+    "n_probe_words": 1078,
+    "n_declared_pairs": 539,
+    "n_dataset": 12668,
+    "covered_pairs_all": 539,
+    "covered_pairs_train": 539,
+    "never_pair_all": [],
+    "never_pair_train": [],
+    "never_word_train": [],
+    "never_literal_train": []
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "rand16": {
+    "coverage": 0.3538306451612903,
+    "top1_given_cov": 0.5584045584045584,
+    "recall": 0.1975806451612903,
+    "in_code_purity": 0.5233160621761658,
+    "n_in_code_pairs": 1351
+  },
+  "rand64": {
+    "coverage": 0.11088709677419355,
+    "top1_given_cov": 0.4909090909090909,
+    "recall": 0.05443548387096774,
+    "in_code_purity": 0.6211382113821138,
+    "n_in_code_pairs": 615
+  },
+  "rand256": {
+    "coverage": 0.05443548387096774,
+    "top1_given_cov": 0.6111111111111112,
+    "recall": 0.03326612903225806,
+    "in_code_purity": 0.6733067729083665,
+    "n_in_code_pairs": 251
+  },
+  "rand1024": {
+    "coverage": 0.020161290322580645,
+    "top1_given_cov": 0.95,
+    "recall": 0.019153225806451613,
+    "in_code_purity": 0.7553956834532374,
+    "n_in_code_pairs": 139
+  },
+  "rand4096": {
+    "coverage": 0.011088709677419355,
+    "top1_given_cov": 0.8181818181818182,
+    "recall": 0.009072580645161291,
+    "in_code_purity": 0.7261904761904762,
+    "n_in_code_pairs": 84
+  },
+  "rand8192": {
+    "coverage": 0.006048387096774193,
+    "top1_given_cov": 0.6666666666666666,
+    "recall": 0.004032258064516129,
+    "in_code_purity": 0.6885245901639344,
+    "n_in_code_pairs": 61
+  },
+  "rand64x2": {
+    "coverage": 0.21068548387096775,
+    "top1_given_cov": 0.5980861244019139,
+    "recall": 0.12600806451612903,
+    "in_code_purity": 0.5906313645621182,
+    "n_in_code_pairs": 982
+  },
+  "rand64x4": {
+    "coverage": 0.36189516129032256,
+    "top1_given_cov": 0.637883008356546,
+    "recall": 0.23084677419354838,
+    "in_code_purity": 0.6014781125639568,
+    "n_in_code_pairs": 1759
+  },
+  "rand256x2": {
+    "coverage": 0.07963709677419355,
+    "top1_given_cov": 0.7848101265822784,
+    "recall": 0.0625,
+    "in_code_purity": 0.703921568627451,
+    "n_in_code_pairs": 510
+  },
+  "rand256x4": {
+    "coverage": 0.16129032258064516,
+    "top1_given_cov": 0.7875,
+    "recall": 0.12701612903225806,
+    "in_code_purity": 0.6776084407971864,
+    "n_in_code_pairs": 853
+  },
+  "rand1024x4": {
+    "coverage": 0.0715725806451613,
+    "top1_given_cov": 0.7605633802816901,
+    "recall": 0.05443548387096774,
+    "in_code_purity": 0.7269303201506592,
+    "n_in_code_pairs": 531
+  },
+  "kmeans8": {
+    "coverage": 0.41330645161290325,
+    "top1_given_cov": 0.7804878048780488,
+    "recall": 0.3225806451612903,
+    "in_code_purity": 0.6092457420924574,
+    "n_in_code_pairs": 2055
+  },
+  "kmeans16": {
+    "coverage": 0.17641129032258066,
+    "top1_given_cov": 0.7942857142857143,
+    "recall": 0.14012096774193547,
+    "in_code_purity": 0.7326515704894083,
+    "n_in_code_pairs": 1369
+  },
+  "kmeans32": {
+    "coverage": 0.08770161290322581,
+    "top1_given_cov": 0.8275862068965517,
+    "recall": 0.07258064516129033,
+    "in_code_purity": 0.7586206896551724,
+    "n_in_code_pairs": 870
+  },
+  "kmeans64": {
+    "coverage": 0.018145161290322582,
+    "top1_given_cov": 0.7777777777777778,
+    "recall": 0.014112903225806451,
+    "in_code_purity": 0.7765042979942693,
+    "n_in_code_pairs": 349
+  },
+  "continuous_nn1": 0.7741935483870968
+}

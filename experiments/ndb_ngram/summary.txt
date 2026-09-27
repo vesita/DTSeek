@@ -1,0 +1,46 @@
+======================================================================================================================================
+每臂 × 每 seed：主指标 / 首次提及 / 按类别拆分 / 代价   （literal 用 NDB 门控 lr=3e-4；参数化臂 lr=1e-3）
+======================================================================================================================================
+arm       seed   repeat   first  id_acc      f1   bg_fp   alias lit_same lit_other    n_mem  s/step  peakMB
+base        42   0.3773  0.8597  0.7063  0.3658  0.0036  0.4176   0.3622    1.0000        0  0.1006     676
+base        43   0.3896  0.8658  0.7120  0.3762  0.0000  0.3960   0.3839    1.0000        0  0.0991     676
+literal     42   0.8408  0.9924  0.9452  0.8033  0.0000  0.4444   0.9865    0.0000      264  0.1202     706
+literal     43   0.8638  0.9965  0.9550  0.8354  0.0000  0.5533   0.9892    0.2500      264  0.1145     706
+lngtab      42   0.3790  0.8559  0.7061  0.3536  0.0036  0.4167   0.3657    0.0000   98,438  0.1152     679
+lngtab      43   0.3671  0.8729  0.7139  0.3631  0.0000  0.3891   0.3560    1.0000   98,438  0.1147     679
+ngrammer    42   0.3532  0.8547  0.6993  0.3567  0.0000  0.4189   0.3302    0.0000  393,868  0.1208     685
+ngrammer    43   0.3908  0.8794  0.7222  0.3759  0.0000  0.4139   0.3808    0.6667  393,868  0.1199     683
+nplm        42   0.3590  0.8675  0.7106  0.3433  0.0000  0.4113   0.3406    0.0000  279,820  0.1163     682
+
+======================================================================================================================================
+配对 Δ（参数化臂 − literal，同 seed）；负 = 不如非参数 NDB
+======================================================================================================================================
+lngtab      42  repeat=-0.4617  first_=-0.1365  id_acc=-0.2391  cluste=-0.4496  bg_fp=+0.0036  alias=-0.0278  lit_same=-0.6208
+lngtab      43  repeat=-0.4967  first_=-0.1236  id_acc=-0.2411  cluste=-0.4723  bg_fp=+0.0000  alias=-0.1642  lit_same=-0.6332
+ngrammer    42  repeat=-0.4876  first_=-0.1377  id_acc=-0.2459  cluste=-0.4466  bg_fp=+0.0000  alias=-0.0256  lit_same=-0.6563
+ngrammer    43  repeat=-0.4730  first_=-0.1171  id_acc=-0.2328  cluste=-0.4595  bg_fp=+0.0000  alias=-0.1394  lit_same=-0.6084
+nplm        42  repeat=-0.4818  first_=-0.1249  id_acc=-0.2346  cluste=-0.4600  bg_fp=+0.0000  alias=-0.0331  lit_same=-0.6459
+
+======================================================================================================================================
+梯度与旁路消融（bypass = 把该臂输出置零后重评；freeze = 参数不进优化器）
+======================================================================================================================================
+base_seed42              arm=base     seed=42 freeze=0 grad_mean=nan all_nonzero=None | bypass=n/a
+                         每参数 |grad|>0：{}
+base_seed43              arm=base     seed=43 freeze=0 grad_mean=nan all_nonzero=None | bypass=n/a
+                         每参数 |grad|>0：{}
+literal_seed42           arm=literal  seed=42 freeze=0 grad_mean=4.8760 all_nonzero=True | bypass=n/a
+                         每参数 |grad|>0：{'level_weight': 0.01057, 'write_gate.weight': 0.001, 'write_gate.bias': 0.0, 'read_gate.weight': 2.64699, 'read_gate.bias': 0.00133}
+literal_seed43           arm=literal  seed=43 freeze=0 grad_mean=4.9665 all_nonzero=True | bypass=n/a
+                         每参数 |grad|>0：{'level_weight': 0.04, 'write_gate.weight': 0.02079, 'write_gate.bias': 0.00229, 'read_gate.weight': 2.17438, 'read_gate.bias': 0.24489}
+lngtab_lr3e4_seed42      arm=lngtab   seed=42 freeze=0 grad_mean=0.6553 all_nonzero=True | bypass repeat=0.3790 (Δ=+0.0000)
+                         每参数 |grad|>0：{'level_weight': 9e-05, 'read_gate.weight': 0.28657, 'read_gate.bias': 0.03485, 'emb.0.weight': 0.00413, 'emb.1.weight': 0.00413}
+lngtab_seed42            arm=lngtab   seed=42 freeze=0 grad_mean=0.5758 all_nonzero=True | bypass repeat=0.3731 (Δ=+0.0000)
+                         每参数 |grad|>0：{'level_weight': 0.00018, 'read_gate.weight': 0.31304, 'read_gate.bias': 0.02979, 'emb.0.weight': 0.00317, 'emb.1.weight': 0.00347}
+lngtab_seed43            arm=lngtab   seed=43 freeze=0 grad_mean=0.3378 all_nonzero=True | bypass repeat=0.3671 (Δ=+0.0000)
+                         每参数 |grad|>0：{'level_weight': 1e-05, 'read_gate.weight': 0.04252, 'read_gate.bias': 0.00936, 'emb.0.weight': 0.00038, 'emb.1.weight': 0.00039}
+ngrammer_seed42          arm=ngrammer seed=42 freeze=0 grad_mean=1.7242 all_nonzero=True | bypass repeat=0.3525 (Δ=-0.0006)
+                         每参数 |grad|>0：{'read_gate.weight': 1.74679, 'read_gate.bias': 0.15483, 'emb.weight': 0.27775, 'proj.weight': 0.19017, 'proj.bias': 0.17226}
+ngrammer_seed43          arm=ngrammer seed=43 freeze=0 grad_mean=1.7310 all_nonzero=True | bypass repeat=0.3873 (Δ=-0.0035)
+                         每参数 |grad|>0：{'read_gate.weight': 1.17971, 'read_gate.bias': 0.17272, 'emb.weight': 0.16517, 'proj.weight': 0.10908, 'proj.bias': 0.13792}
+nplm_seed42              arm=nplm     seed=42 freeze=0 grad_mean=3.5089 all_nonzero=True | bypass repeat=0.3600 (Δ=+0.0010)
+                         每参数 |grad|>0：{'read_gate.weight': 1.98122, 'read_gate.bias': 0.17767, 'emb.weight': 0.74398, 'fc1.weight': 0.11382, 'fc1.bias': 0.10898, 'fc2.weight': 0.46821, 'fc2.bias': 0.09072}
