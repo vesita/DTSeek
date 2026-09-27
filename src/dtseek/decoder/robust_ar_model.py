@@ -10,10 +10,13 @@ import torch.nn as nn
 
 
 class RobustARSliceDecoder(nn.Module):
-    def __init__(self, hidden_dim: int = 128, num_classes: int = 4, num_heads: int = 4, num_layers: int = 2):
+    def __init__(self, hidden_dim: int = 128, num_classes: int = 4, num_heads: int = 4,
+                 num_layers: int = 2, dim_feedforward: int | None = None):
         super().__init__()
         self.hidden_dim = hidden_dim
         self.num_classes = num_classes
+        self.num_layers = num_layers
+        self.dim_feedforward = dim_feedforward or hidden_dim * 4
 
         # 起始 Query Token（代表“开始发射第 1 个切片”）
         self.bos_query = nn.Parameter(torch.randn(1, 1, hidden_dim) * 0.05)
@@ -34,7 +37,7 @@ class RobustARSliceDecoder(nn.Module):
         decoder_layer = nn.TransformerDecoderLayer(
             d_model=hidden_dim,
             nhead=num_heads,
-            dim_feedforward=hidden_dim * 4,
+            dim_feedforward=dim_feedforward or hidden_dim * 4,
             dropout=0.1,
             batch_first=True,
             norm_first=True,

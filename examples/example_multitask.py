@@ -8,7 +8,7 @@
 """
 import argparse
 
-from dtseek.tasks.engine import DEFAULT_CKPT, MultiTaskEngine
+from dtseek.tasks.engine import DEFAULT_BASE, MultiTaskEngine
 
 RESET = "\033[0m"
 
@@ -40,24 +40,24 @@ def show(engine: MultiTaskEngine, line: str, tasks: list[str] | None = None):
 def main(argv: list[str] | None = None, default_tasks: list[str] | None = None):
     ap = argparse.ArgumentParser(description="DTSeek 多任务决策引擎演示")
     ap.add_argument("text", nargs="?", help="待分析文本；留空进入交互模式")
-    ap.add_argument("--ckpt", default=DEFAULT_CKPT)
+    ap.add_argument("--base", default=DEFAULT_BASE)
     ap.add_argument("--tasks", nargs="*", default=default_tasks,
                     help="只跑这几张任务卡；留空 = ckpt 里的全部")
     args = ap.parse_args(argv)
 
-    engine = MultiTaskEngine(ckpt_path=args.ckpt)
+    engine = MultiTaskEngine(base_path=args.base)
     if args.tasks:
         missing = [t for t in args.tasks if t not in engine.decoders]
         if missing:
-            ap.error(f"ckpt 里没有任务卡 {missing}；可用：{engine.tasks}")
+            ap.error(f"未挂载任务卡 {missing}；已挂载：{engine.attached}")
 
     if args.text:
         show(engine, args.text, args.tasks)
         return
 
-    labels = " / ".join(engine.task_label(t) for t in (args.tasks or engine.tasks))
+    labels = " / ".join(engine.task_label(t) for t in (args.tasks or engine.attached))
     print("\n" + "=" * 68)
-    print("  DTSeek 多任务决策引擎（共享基座 + 可插拔任务卡）")
+    print("  DTSeek 决策引擎（基座常驻 + 任务卡热插拔）")
     print(f"  一次输入，同时给出：{labels}")
     print("  输入 exit 退出")
     print("=" * 68)

@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from dtseek.tasks.probe import run_probe, sanity_check  # noqa: E402
-from dtseek.tasks.engine import DEFAULT_CKPT, MultiTaskEngine  # noqa: E402
+from dtseek.tasks.engine import DEFAULT_BASE, MultiTaskEngine  # noqa: E402
 from dtseek.tasks.plugin import probe_units_of  # noqa: E402
 
 
@@ -77,17 +77,17 @@ def report(engine: MultiTaskEngine, task: str, limit: int, show_failures: int) -
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="DTSeek 通用词级探针")
-    ap.add_argument("--ckpt", default=DEFAULT_CKPT)
+    ap.add_argument("--base", default=DEFAULT_BASE)
     ap.add_argument("--task", default=None, help="只跑这张任务卡；留空 = ckpt 里全部")
     ap.add_argument("--limit", type=int, default=0, help="只跑前 N 个探针单元（调试用）")
     ap.add_argument("--show-failures", type=int, default=0, help="打印前 N 条失败样例")
     args = ap.parse_args(argv)
 
-    engine = MultiTaskEngine(ckpt_path=args.ckpt)
-    tasks = [args.task] if args.task else engine.tasks
+    engine = MultiTaskEngine(base_path=args.base)
+    tasks = [args.task] if args.task else engine.attached
     missing = [t for t in tasks if t not in engine.decoders]
     if missing:
-        ap.error(f"ckpt 里没有任务卡 {missing}；可用：{engine.tasks}")
+        ap.error(f"未挂载任务卡 {missing}；已挂载：{engine.attached}")
 
     all_sane = True
     for task in tasks:

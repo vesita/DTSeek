@@ -1,97 +1,119 @@
-"""多任务推理引擎 —— 共享基座 + 可插拔任务卡。
+"""多任务推理引擎 —— 基座常驻，任务卡**热插拔**。
 
-用法：
-    engine = MultiTaskEngine("checkpoints/multitask_v2_dtseek.pt")
-    engine.predict("我不太喜欢这个方案")
-    engine.predict("...", tasks=["sentiment"])      # 只跑其中一张卡
+插件化的意思是"换任务类型立刻换"，所以基座与任务卡是分开的两样东西：
 
-类别名、展示名、配色、发射步数全部来自 ckpt 里存的 `TaskSpec` 快照 ——
-推理端不再手抄第二份类别定义。加载时用 `check_ckpt_specs` 做 fail-closed 校验：
-ckpt 与当前代码的任务声明对不上就直接抛错，而不是静默跑出错的结果。
+    engine = MultiTaskEngine()                 # 加载基座一次（6.5 MB）
+    engine.attach("cards/relation.pt")          # 挂一张卡（2.5 MB，秒级）
+    engine.attach("cards/sentiment.pt")         # 再挂一张
+    engine.predict(text)                        # 已挂的卡全跑
+    engine.predict(text, tasks=["relation"])    # 只跑其中一张
+    engine.attach("cards/relation_v2.pt")       # 同名 → 就地替换（不用重载基座）
+
+加一张新卡不需要重训基座：用 `training/train_task_card.py` 在**冻结的基座**上单独训那张卡
+（分钟级），存成一个小文件，attach 进来即可。
+
+类别名、配色、窗口、切段策略都以**注册表里的任务卡**为准；产物里的 spec 快照只用来
+校验漂移（见 `check_ckpt_specs`）。
 """
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import torch
 import torch.nn.functional as F
 
 from nano_char_tokenizer import NanoCharTokenizer
-from dtseek.encoder.nano_doc_encoder import NanoDocEncoder
-from dtseek.decoder.robust_ar_model import RobustARSliceDecoder
 from dtseek.encoder.segmenter import split_with_global_offsets
+from dtseek.tasks.artifacts import (
+    ArtifactError,
+    build_card_decoder,
+    check_card_base_compat,
+    load_base_encoder,
+    read_card,
+)
 from dtseek.tasks.plugin import TaskSpec, all_tasks, check_ckpt_specs
 from dtseek.tasks.runtime import render_highlight
 
-DEFAULT_CKPT = "checkpoints/multitask_frozen_dtseek.pt"
+DEFAULT_BASE = "checkpoints/base_encoder.pt"
+DEFAULT_CARDS_DIR = "checkpoints/cards"
 
 
 class MultiTaskEngine:
-    """加载一个多任务 ckpt，按任务卡逐张推理。"""
+    """基座常驻 + 可热插拔的任务卡。"""
 
-    def __init__(self, ckpt_path: str = DEFAULT_CKPT, device: str | None = None,
-                 verify_specs: bool = True):
+    def __init__(self, base_path: str = DEFAULT_BASE, cards_dir: str | None = None,
+                 device: str | None = None, auto_attach: bool = True):
         self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
         self.tokenizer = NanoCharTokenizer()
 
-        if not os.path.exists(ckpt_path):
-            raise FileNotFoundError(f"未找到多任务权重 {ckpt_path}，请先跑 training/train_multitask.py")
+        if not os.path.exists(base_path):
+            raise FileNotFoundError(
+                f"未找到基座产物 {base_path}。\n"
+                f"  若手上是一体 ckpt，先拆：uv run python scripts/split_checkpoint.py --ckpt <ckpt>\n"
+                f"  若要重训：uv run python training/train_multitask.py")
 
-        ckpt = torch.load(ckpt_path, map_location=self.device, weights_only=False)
-        if "task_specs" not in ckpt:
-            raise ValueError(
-                f"{ckpt_path} 是插件化之前的旧格式（只有类别名、没有 TaskSpec 快照）。"
-                " 请用当前的 training/train_multitask.py 重新训练。")
+        try:
+            self.doc_encoder, self._base = load_base_encoder(base_path, self.device)
+        except ArtifactError as exc:
+            raise ArtifactError(
+                f"{exc}\n  拆分命令：uv run python scripts/split_checkpoint.py --ckpt {base_path}") from exc
 
-        self.specs: dict[str, TaskSpec] = {
-            name: TaskSpec.from_snapshot(snap) for name, snap in ckpt["task_specs"].items()
-        }
-        if verify_specs:
-            for note in check_ckpt_specs(ckpt["task_specs"], all_tasks()):
-                print(f"  [ckpt] {note}")
+        self.base_path = base_path
+        self.specs: dict[str, TaskSpec] = {}
+        self.decoders: dict[str, object] = {}
+        self.card_paths: dict[str, str] = {}
 
-        # 推理行为以**注册表里的任务卡**为准：快照记录的是"权重当年照什么训的"，
-        # 而切段策略、窗口大小这类推理行为属于代码。快照里写了且不一致的，上面已拦掉；
-        # 快照里没写的（旧格式），就在这里按代码继承。
-        for name, card in all_tasks().items():
-            if name in self.specs:
-                self.specs[name] = card.spec
+        if auto_attach:
+            self.attach_dir(cards_dir or DEFAULT_CARDS_DIR)
 
-        hidden_dim = ckpt["hidden_dim"]
-        enc_kwargs = dict(ckpt.get("encoder_kwargs", {}))
-        dec_kwargs = dict(ckpt.get("decoder_kwargs", {"num_heads": 4, "num_layers": 2}))
+    # ---- 热插拔 -----------------------------------------------------------
 
-        self.doc_encoder = NanoDocEncoder(
-            vocab_size=self.tokenizer.vocab_size,
-            hidden_dim=hidden_dim,
-            dropout=0.0,
-            **enc_kwargs,
-        ).to(self.device)
-        self.doc_encoder.load_state_dict(ckpt["doc_encoder"])
-        self.doc_encoder.eval()
+    @property
+    def attached(self) -> list[str]:
+        return list(self.decoders)
 
-        self.decoders: dict[str, RobustARSliceDecoder] = {}
-        for name, sd in ckpt["decoders"].items():
-            dec = RobustARSliceDecoder(hidden_dim=hidden_dim,
-                                       num_classes=self.specs[name].num_classes,
-                                       **dec_kwargs).to(self.device)
-            dec.load_state_dict(sd)
-            dec.eval()
-            self.decoders[name] = dec
+    def attach(self, path: str | Path) -> str:
+        """挂载（或**就地替换**同名的）一张任务卡。这是"立刻更换任务类型"的入口。"""
+        path = str(path)
+        ck = read_card(path)
+        check_card_base_compat(ck, self._base, path)
 
-        self.tasks: list[str] = list(ckpt.get("task_order") or sorted(self.decoders))
-        self.train_args = ckpt.get("train_args", {})
+        name = ck["task"]
+        # 产物里的 spec 快照只用于校验漂移：类别名/类别数对不上就拦下来
+        check_ckpt_specs({name: ck["spec"]}, all_tasks())
+
+        decoder, artifact_spec = build_card_decoder(ck, self.device)
+        registered = all_tasks().get(name)
+        # 推理行为（切段策略/窗口）以注册表里的卡为准；卡没注册时退回产物里的快照
+        self.specs[name] = registered.spec if registered is not None else artifact_spec
+        self.decoders[name] = decoder
+        self.card_paths[name] = path
+        return name
+
+    def attach_dir(self, directory: str | Path) -> list[str]:
+        d = Path(directory)
+        if not d.is_dir():
+            return []
+        return [self.attach(p) for p in sorted(d.glob("*.pt"))]
+
+    def detach(self, name: str) -> None:
+        self.decoders.pop(name, None)
+        self.specs.pop(name, None)
+        self.card_paths.pop(name, None)
+
+    def task_label(self, task: str) -> str:
+        return self.specs[task].label
 
     # ---- 推理 -------------------------------------------------------------
 
     @torch.no_grad()
     def _run_segment(self, task: str, segment_text: str) -> list[dict]:
-        """在单个分句上跑一张任务卡的完整自回归发射。"""
         decoder = self.decoders[task]
         spec = self.specs[task]
         classes = spec.classes
 
-        enc = self.tokenizer.encode(segment_text, max_length=64, padding=True)
+        enc = self.tokenizer.encode(segment_text, max_length=spec.max_len, padding=True)
         inp = torch.tensor([enc["input_ids"]], device=self.device)
         mask = torch.tensor([enc["attention_mask"]], dtype=torch.bool, device=self.device)
         L = len(segment_text)
@@ -144,29 +166,25 @@ class MultiTaskEngine:
 
     def predict(self, text: str, tasks: list[str] | None = None,
                 max_chunk_len: int | None = None) -> dict:
-        """对所有（或指定）任务卡并行输出，按需分句。
-
-        **切段长度必须逐任务取**：人物追踪声明 `max_len=120`（要跨多轮上下文），
-        若这里仍用统一的 55 字去切，一段人物对话会被劈成几段、id 在每段里从 1 重来，
-        跨段共指直接失效。实测这就是「重复提及拿到错误 id + 62% 漏标」的原因。
-        """
+        """对已挂载的（或指定的）任务卡输出。基座只编码一次，各卡共享。"""
         text = text.strip()
         if not text:
             return {"error": "输入为空"}
 
-        chosen = self.tasks if tasks is None else [t for t in tasks if t in self.decoders]
+        chosen = self.attached if tasks is None else [t for t in tasks if t in self.decoders]
         result = {"text": text, "num_segments": 0, "tasks": {}}
 
         for task in chosen:
             spec = self.specs[task]
             limit = max_chunk_len or max(16, spec.max_len - 8)
             if spec.segment_policy == "window" and len(text) <= limit:
-                # 整段一次解码：跨句共指要求 id 在窗口内保持一致，
-                # 按句切开会让 id 每句从 1 重来（而且训练就是这么整段喂的）。
+                # 整段一次解码：跨句状态（如人物 id）必须在窗口内保持一致，
+                # 按句切开会让状态在句边界清零。训练也是整段喂的。
                 segments = [{"text": text, "global_start": 0, "global_end": len(text)}]
             else:
                 segments = split_with_global_offsets(text, max_chunk_len=limit)
             result["num_segments"] = max(result["num_segments"], len(segments))
+
             anchors = []
             for seg in segments:
                 g0 = seg["global_start"]
@@ -177,16 +195,13 @@ class MultiTaskEngine:
                         "s0": g0 + a["local_s0"],
                         "e0": g0 + a["local_e0"],
                     })
-            if self.specs[task].pair_emission:
+            if spec.pair_emission:
                 for i, a in enumerate(anchors):
                     a["pair_index"] = i // 2 + 1
                     a["pair_side"] = "左" if i % 2 == 0 else "右"
             result["tasks"][task] = anchors
 
         return result
-
-    def task_label(self, task: str) -> str:
-        return self.specs[task].label
 
     # ---- 呈现 -------------------------------------------------------------
 
