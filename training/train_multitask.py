@@ -348,9 +348,9 @@ def train_multitask(num_epochs: int = 16, batch_size: int = 64,
 
 
 if __name__ == "__main__":
-    # 情绪任务样本量按词典规模放大：186 词 ⇒ 每类需 ~6000 条（≈每词 100 个样本），
-    # 否则个别词（如"糟心""破防了"）类别学不准。
+    # 情绪任务样本量按词典规模放大：199 词 ⇒ 每类 8000 条，配合数据集内部的
+    # "每词下限 60 / 上限 120" 机制，保证词典里每个词都有足够且均衡的监督。
     train_multitask(
         num_epochs=16,
-        task_samples={"pronoun": 6000, "sentiment": 24000, "ownership": 8000},
+        task_samples={"pronoun": 6000, "sentiment": 32000, "ownership": 8000},
     )

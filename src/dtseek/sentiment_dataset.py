@@ -6,35 +6,42 @@
   - 2: 愤怒 / 暴躁 / 不满
   - 3: 悲伤 / 沮丧 / 焦虑
 
-v2 修复（本期）：
-  v1 只有 61 个情绪词，且全是"标准书面词"。像 **难受**、**破防了**、**糟心**
-  这类最常用的口语/网络表达完全不在表内 —— 用户实测 "我感觉有点难受" 被误判为
-  积极。v2 把词典扩到 ~190 词，三个类别各 ~60 词，覆盖书面词 / 口语 / 网络用语；
-  并补入模板合成，保证同一个情绪词出现在**句首 / 句中 / 句尾**等不同位置，
-  让双指针网络学到位置无关的定位能力。
+────────────────────────────────────────────────────────────────────────
+v3 修复（问题由词级探针 scripts/eval_emotion_words.py 暴露）
 
-数据源：
-  1. 真实对话挖掘：用扩充后的词典从 nanoSeek 语料命中更多真实句；
-  2. 模板合成：为词典里的每个词构造多种上下文，补足真实语料覆盖不到的词。
+v2 的假象：句级验证集准确率 98%，但**词级探针只有 43.7%**（悲伤类甚至 13.3%）。
+根因：真实语料挖掘是 Zipf 分布 ——
+    类别1 词典 63 词，训练里只出现 41 词，样本量中位数 = 2，22 个词从未出现；
+    类别3 词典 62 词，只出现 43 词，中位数 = 3，19 个词从未出现。
+高频词（"难受" 1308 条）淹没低频词（"心塞" 0 条），验证集又抽的是同一批高频词，
+所以 98% 完全是"在自己会的那批词上考自己"。
+
+v3 三条修复：
+  1. **每个词一条下限**（per_word_floor）：合成保底，保证词典里每个词至少有
+     N 条训练样本，消灭"从未出现"；
+  2. **每个词一条上限**（per_word_cap）：真实挖掘按首切片词计数封顶，
+     压平 Zipf 长尾，避免高频词淹没低频词；
+  3. **显式否定式**（"不高兴/不开心/不满意"）：v2 把否定句整句丢弃，
+     模型从没见过否定式；v3 把常见否定式作为词条收进负类，
+     使"高兴→积极"与"不高兴→消极"同时可学。
+────────────────────────────────────────────────────────────────────────
 """
 import glob
 import random
 import re
 
 # ---------------------------------------------------------------------------
-# 情绪词典 v2（~190 词）
+# 情绪词典 v3（~200 词）
 #   原则：优先 2 字以上词条，避免单字误匹配 ——
-#   例如裸 "赞" 会命中"赞助"、裸 "牛" 会命中"牛奶"、裸 "爽" 会命中"凉爽"。
+#   裸 "赞" 会命中"赞助"、裸 "牛" 会命中"牛奶"、裸 "爽" 会命中"凉爽"。
 # ---------------------------------------------------------------------------
 EMOTION_KEYWORDS = [
-    # 类别 1: 积极 / 喜悦 / 赞赏（60 词）
+    # ── 类别 1: 积极 / 喜悦 / 赞赏 ──
     (1, [
-        # 基础情绪
+        # 基础情绪（"高兴/开心"这一类最简单直接的核心词）
         "开心", "高兴", "快乐", "愉快", "喜悦", "欢喜", "兴奋", "激动", "幸福", "满足",
         "舒心", "畅快", "痛快", "惬意", "舒服", "舒适", "享受", "轻松",
         # 认同 / 喜爱
-        # 注意：**不含"支持"** —— 它在技术语境里是"支持某功能"（能力描述），
-        # 不是情绪；收进词典会把"请问支持批量导入吗"这类中性句污染成积极。
         "喜欢", "喜爱", "满意", "赞成", "赞同", "认可", "欣赏", "佩服", "钦佩",
         "羡慕", "期待", "盼望", "惊喜", "惊艳", "赞叹",
         # 评价 / 赞美
@@ -45,7 +52,7 @@ EMOTION_KEYWORDS = [
         # 宽慰
         "欣慰", "庆幸", "安心", "踏实", "放心",
     ]),
-    # 类别 2: 愤怒 / 暴躁 / 不满（62 词）
+    # ── 类别 2: 愤怒 / 暴躁 / 不满 ──
     (2, [
         # 愤怒
         "生气", "愤怒", "恼火", "火大", "来气", "气人", "气死", "气炸", "气不过",
@@ -60,10 +67,12 @@ EMOTION_KEYWORDS = [
         # 无语 / 斥责
         "无语", "扯淡", "胡扯", "什么鬼", "搞什么", "莫名其妙", "不可理喻",
         "忍无可忍", "受够了", "受不了",
+        # ★ 显式否定式（对"满意/喜欢"的否定属于不满，不是悲伤）
+        "不满意", "不喜欢", "不认可", "不赞同", "看不上",
     ]),
-    # 类别 3: 悲伤 / 沮丧 / 焦虑（64 词）
+    # ── 类别 3: 悲伤 / 沮丧 / 焦虑 ──
     (3, [
-        # 悲伤（"难受" 在 v1 里缺失，是本次误判的直接原因）
+        # 悲伤
         "难过", "难受", "伤心", "悲伤", "悲痛", "心痛", "心酸", "委屈", "憋屈",
         "痛苦", "苦闷", "郁闷", "低落", "消沉", "沮丧", "失落", "失望", "绝望",
         "崩溃", "心灰意冷", "心塞", "堵得慌", "揪心", "惆怅", "想哭", "泪目",
@@ -75,6 +84,8 @@ EMOTION_KEYWORDS = [
         "孤独", "寂寞", "空虚",
         # 口语 / 网络
         "破防了", "绷不住", "麻了", "烦闷", "迷茫", "无奈", "遗憾", "可惜", "舍不得",
+        # ★ 显式否定式（对"高兴/开心"的否定属于情绪低落）
+        "不高兴", "不开心", "不快乐", "不愉快", "不舒服", "不痛快", "不踏实", "不放心",
     ]),
 ]
 
@@ -94,27 +105,8 @@ LEXICON_INDEX = _validate_lexicon()
 LEXICON_BY_CAT = {cat: list(words) for cat, words in EMOTION_KEYWORDS}
 
 
-def _validate_neutral_purity():
-    """中性句池**不得含任何情绪词** —— 否则背景类标签被污染。
-
-    这是 fail-closed 断言而不是静默过滤：一旦有人往中性池里加了含情绪词的句子，
-    构建数据集时立刻报错，而不是悄悄训出一个"把中性句判成积极"的模型。
-    历史上真实踩过：'请问支持批量导入吗' 里的"支持"被当成积极情绪。
-    """
-    offenders = []
-    for s in NEUTRAL_SENTENCES + NEUTRAL_COLLOQUIAL:
-        cat, spans = extract_emotion_spans(s)
-        if cat != 0:
-            offenders.append((s, [x["word"] for x in spans]))
-    if offenders:
-        detail = "\n".join(f"    '{s}' 命中 {ws}" for s, ws in offenders)
-        raise ValueError(
-            "中性句池混入情绪词，会造成背景类标签污染：\n" + detail
-        )
-
-
 # ---------------------------------------------------------------------------
-# 中性句池：客观陈述句 + 口语中性句（两类都要，否则中庸疑问句会被误判为有情绪）
+# 中性句池：客观陈述句 + 口语中性句
 # ---------------------------------------------------------------------------
 NEUTRAL_SENTENCES = [
     "数据库集群写入延迟保持在五毫秒以内。",
@@ -172,49 +164,89 @@ NEUTRAL_COLLOQUIAL = [
 
 
 # ---------------------------------------------------------------------------
-# 模板合成：让同一个情绪词出现在句首 / 句中 / 句尾，训练位置无关的双指针定位
+# 合成载体模板：词出现在句首 / 句中 / 句尾，句式各不相同。
+#   模板自身不得含情绪词（由 _validate_carriers 强制）。
 # ---------------------------------------------------------------------------
-SYNTH_TEMPLATES = [
-    "{e}。",                                  # 词在句首
-    "{e}，一时不知道怎么形容。",
-    "{e}，先这样吧。",
-    "说实话，{e}。",                           # 词在句中
-    "现在就是{e}。",
-    "刚看到这个消息，{e}。",
-    "折腾了一整天，{e}。",
-    "这波下来，{e}。",
-    "想到后面还要继续，{e}。",
-    "主要是{e}。",
-    "说到底还是{e}。",                          # 词在句尾
-    "说不上来，就是{e}。",
-    "没办法，{e}。",
-    "反正就是{e}。",
-    "跟朋友聊完之后，反而{e}。",
+SYNTH_CARRIERS = [
+    # 词在句首
+    "{e}。", "{e}，真的。", "{e}啊。", "{e}，谁懂啊。",
+    "{e}，一时不知道怎么形容。", "{e}，先这样吧。",
+    # 词在句中
+    "说实话，{e}。", "现在就是{e}。", "主要是{e}。", "说到底还是{e}。",
+    "刚看到这个消息，{e}。", "折腾了一整天，{e}。", "这波下来，{e}。",
+    "想到后面还要继续，{e}。", "跟朋友聊完之后，{e}。",
+    "说不上来，就是{e}。", "反正就是{e}。", "没办法，{e}。",
+    "这几天一直{e}。", "遇到这种事，{e}。", "看到评论区，{e}。",
+    # 词在句尾
+    "今天真的是{e}。", "我现在整个人都{e}。", "听完这话我直接{e}。",
+    "忙完这些事只剩{e}。", "最近的状态就是{e}。", "想想还是有点{e}。",
+    "说完之后反而更{e}。", "不知道为啥就是{e}。", "整个人处于{e}的状态。",
+    # 带前后语境的复合句
+    "本来没觉得什么，后来越想越{e}。",
+    "事情已经这样了，再说什么也是{e}。",
+    "他这么一说，我突然觉得{e}。",
+    "虽然不该这样，但还是{e}。",
+    "过了这么久，提起来依然{e}。",
+    "今天发生了很多事，总之{e}。",
+    # ★ 无终止标点（真实聊天输入常常没有句号）
+    #   缺这一类会让模型在"无标点短输入"上定位截断：
+    #   实测 '开心' -> 只圈 '开'，'心情不错' -> 误判愤怒；补上后两者均正常。
+    "{e}", "真的很{e}", "我现在{e}", "感觉{e}", "有点{e}",
+    "整个人都{e}", "确实是{e}", "怎么这么{e}", "好{e}",
 ]
+
+
+def _validate_carriers():
+    """载体模板自身不得含情绪词 —— 否则合成句会出现多切片、标签归属混乱。"""
+    bad = []
+    for t in SYNTH_CARRIERS:
+        probe = t.format(e="")
+        cat, spans = extract_emotion_spans(probe)
+        if cat != 0:
+            bad.append((t, [x["word"] for x in spans]))
+    if bad:
+        raise ValueError("合成载体模板本身含情绪词：\n" +
+                         "\n".join(f"    '{t}' 命中 {w}" for t, w in bad))
+
+
+def _validate_neutral_purity():
+    """中性句池不得含任何情绪词（否则背景类标签被污染）。
+
+    fail-closed 断言而非静默过滤：一旦往中性池加了含情绪词的句子，立刻报错。
+    真实踩过：'请问支持批量导入吗' 里的"支持"曾被当成积极情绪（该词已从词典移除）。
+    """
+    offenders = []
+    for s in NEUTRAL_SENTENCES + NEUTRAL_COLLOQUIAL:
+        cat, spans = extract_emotion_spans(s)
+        if cat != 0:
+            offenders.append((s, [x["word"] for x in spans]))
+    if offenders:
+        detail = "\n".join(f"    '{s}' 命中 {ws}" for s, ws in offenders)
+        raise ValueError("中性句池混入情绪词，会造成背景类标签污染：\n" + detail)
 
 
 def _is_negated(text: str, start: int, window: int = 3) -> bool:
     """判断情绪词前方 window 个字符内是否有否定词。
 
-    真实踩过：'我不喜欢你' 会被 "喜欢" 命中标成积极。否定式一律**丢弃**
-    （而不是翻转标签）—— "不喜欢" 该算愤怒还是悲伤并不确定，
-    丢掉比标错干净。
+    注意：词典已显式收录"不高兴/不开心/不满意"等常见否定式，它们会作为
+    **整体词条**先被匹配到（长词优先），不会走到这里。这里兜底的是词典未收录的
+    临时否定；命中则整句丢弃 —— 翻转标签风险更大，丢掉比标错干净。
     """
     prefix = text[max(0, start - window):start]
     return any(neg in prefix for neg in ("不", "没", "别", "未", "无", "非"))
 
 
-def extract_emotion_spans(text: str) -> tuple[int, list[dict]]:
+def extract_emotion_spans(text: str):
     """提取句子中的情绪词切片与主导情绪类别。
 
     Returns:
         (dominant_label, spans)
-        dominant_label: 1/2/3 = 主情绪；0 = 无情绪词；-1 = 丢弃（混杂 / 否定式）
+        dominant_label: 1/2/3 = 主情绪；0 = 无情绪词；-1 = 丢弃（混杂 / 未收录的否定式）
     """
     spans = []
     occupied = [False] * len(text)
 
-    # 长词优先，避免 "难受" 被更短的词切开
+    # 长词优先："不高兴" 必须先于 "高兴" 匹配
     flat_keywords = []
     for cat_id, words in EMOTION_KEYWORDS:
         for w in words:
@@ -229,7 +261,6 @@ def extract_emotion_spans(text: str) -> tuple[int, list[dict]]:
                 break
             end = idx + length
             if not any(occupied[i] for i in range(idx, end)):
-                # 否定式（"不喜欢"）不参与标注，整句丢弃
                 if _is_negated(text, idx):
                     return -1, []
                 for i in range(idx, end):
@@ -249,15 +280,49 @@ def extract_emotion_spans(text: str) -> tuple[int, list[dict]]:
     return categories[0], spans
 
 
-def _mine_real(buckets: dict[int, list[dict]], target_per_class: int, max_seq_len: int):
-    """用扩充后的词典从真实对话语料挖掘情绪句。"""
+# ---------------------------------------------------------------------------
+# 数据集构建：合成保底（每词有下限）+ 真实挖掘（每词有上限）
+# ---------------------------------------------------------------------------
+
+def _synthesize_floor(buckets, per_word_floor: int):
+    """为词典里**每个词**生成恰好 per_word_floor 条样本，保证无死角覆盖。"""
+    for cat in (1, 2, 3):
+        words = LEXICON_BY_CAT[cat]
+        for wi, word in enumerate(words):
+            made = 0
+            ti = wi  # 用词序号做起点偏移，避免所有词都从同一个模板开始
+            guard = 0
+            while made < per_word_floor and guard < per_word_floor * 50:
+                guard += 1
+                tpl = SYNTH_CARRIERS[ti % len(SYNTH_CARRIERS)]
+                ti += 1
+                s = tpl.format(e=word)
+                cat_id, spans = extract_emotion_spans(s)
+                # 合成句必须只标出这个词、且类别正确，否则丢弃重试
+                if cat_id == cat and spans and len(spans) == 1:
+                    buckets[cat].append({"text": s, "label": cat, "spans": spans})
+                    made += 1
+
+
+def _mine_real_capped(buckets, target_per_class: int, max_seq_len: int,
+                      per_word_cap: int):
+    """真实语料挖掘，按首切片词计数**封顶**，压平 Zipf 长尾。
+
+    不加封顶时高频词（"难受" 1300+ 条）会淹没低频词（几十条甚至 0 条），
+    这正是 v2 词级准确率只有 43.7% 的直接原因。
+    """
     files = sorted(glob.glob("/home/vesita/coding/my/nanoSeek/data/chinese/*dialogue.txt"))
+    word_count = {c: {} for c in (1, 2, 3)}
+
+    def _full():
+        return all(len(buckets[c]) >= target_per_class for c in (1, 2, 3))
+
     for f in files:
-        if all(len(buckets[c]) >= target_per_class for c in (1, 2, 3)):
+        if _full():
             break
         with open(f, encoding="utf-8", errors="ignore") as fp:
             for line in fp:
-                if all(len(buckets[c]) >= target_per_class for c in (1, 2, 3)):
+                if _full():
                     break
                 text = re.sub(r"^(用户|模型|系统|提问|回答|User|Assistant)[:：]\s*", "", line.strip())
                 for s in re.split(r"[。！？\n；;]+", text):
@@ -265,51 +330,56 @@ def _mine_real(buckets: dict[int, list[dict]], target_per_class: int, max_seq_le
                     if not (4 <= len(s) <= max_seq_len):
                         continue
                     cat_id, spans = extract_emotion_spans(s)
-                    if cat_id in (1, 2, 3) and len(buckets[cat_id]) < target_per_class:
-                        buckets[cat_id].append({"text": s, "label": cat_id, "spans": spans})
+                    if cat_id not in (1, 2, 3):
+                        continue
+                    if len(buckets[cat_id]) >= target_per_class:
+                        continue
+                    head_word = spans[0]["word"]
+                    cnt = word_count[cat_id].get(head_word, 0)
+                    if cnt >= per_word_cap:
+                        continue  # 该词已达上限，跳过（给长尾留空间）
+                    word_count[cat_id][head_word] = cnt + 1
+                    buckets[cat_id].append({"text": s, "label": cat_id, "spans": spans})
 
 
-def _synthesize(buckets: dict[int, list[dict]], target_per_class: int, rng: random.Random):
-    """真实语料不够时用模板合成补齐（保证每个词都有多种上下文）。"""
-    for cat in (1, 2, 3):
-        words = LEXICON_BY_CAT[cat]
-        guard = 0
-        while len(buckets[cat]) < target_per_class and guard < target_per_class * 20:
-            guard += 1
-            word = rng.choice(words)
-            tpl = rng.choice(SYNTH_TEMPLATES)
-            s = tpl.format(e=word)
-            cat_id, spans = extract_emotion_spans(s)
-            # 合成句可能因为模板词与其他词冲突导致类别不符，直接跳过
-            if cat_id == cat and spans:
-                buckets[cat].append({"text": s, "label": cat, "spans": spans})
+def build_sentiment_dataset(target_samples: int = 32000, max_seq_len: int = 64,
+                            per_word_floor: int = 60, per_word_cap: int = 120):
+    """构建情绪切片数据集。
 
-
-def build_sentiment_dataset(target_samples: int = 12000, max_seq_len: int = 64) -> list[dict]:
-    """构建情绪切片数据集：真实挖掘优先，模板合成补齐，背景类等量配平。"""
-    # fail-closed：中性池被污染时立刻报错，而不是训出一个误判模型
+    Args:
+        target_samples: 目标总样本数（四类均分）
+        per_word_floor: 每个词至少合成多少条（保证无死角覆盖）
+        per_word_cap: 每个词的真实语料最多采多少条（压平 Zipf 长尾）
+    """
+    _validate_carriers()
     _validate_neutral_purity()
 
     rng = random.Random(20240927)
     target_per_class = target_samples // 4
+    buckets = {0: [], 1: [], 2: [], 3: []}
 
-    buckets: dict[int, list[dict]] = {0: [], 1: [], 2: [], 3: []}
+    n_words = {c: len(LEXICON_BY_CAT[c]) for c in (1, 2, 3)}
+    print(f"  情绪词典：{len(LEXICON_INDEX)} 词 "
+          f"(积极 {n_words[1]} / 愤怒 {n_words[2]} / 悲伤 {n_words[3]})")
 
-    print(f"  情绪数据集目标：每类 {target_per_class} 条（词典 {len(LEXICON_INDEX)} 词）")
-    _mine_real(buckets, target_per_class, max_seq_len)
-    mined = {c: len(buckets[c]) for c in (1, 2, 3)}
-    print(f"  真实语料挖掘：积极 {mined[1]} | 愤怒 {mined[2]} | 悲伤 {mined[3]}")
+    # 1. 合成保底：每个词恰好 per_word_floor 条
+    _synthesize_floor(buckets, per_word_floor)
+    floor_n = {c: len(buckets[c]) for c in (1, 2, 3)}
+    print(f"  合成保底(每词 {per_word_floor} 条)："
+          f"积极 {floor_n[1]} / 愤怒 {floor_n[2]} / 悲伤 {floor_n[3]}")
 
-    _synthesize(buckets, target_per_class, rng)
-    synth = {c: len(buckets[c]) - mined[c] for c in (1, 2, 3)}
-    print(f"  模板合成补齐：积极 {synth[1]} | 愤怒 {synth[2]} | 悲伤 {synth[3]}")
+    # 2. 真实语料补齐（单词封顶 per_word_cap）
+    _mine_real_capped(buckets, target_per_class, max_seq_len, per_word_cap)
+    real_n = {c: len(buckets[c]) - floor_n[c] for c in (1, 2, 3)}
+    print(f"  真实语料补充(每词上限 {per_word_cap})："
+          f"积极 {real_n[1]} / 愤怒 {real_n[2]} / 悲伤 {real_n[3]}")
 
-    # 中性背景类：客观陈述句 + 口语中性句各半
+    # 3. 中性背景类
     neutral_pool = NEUTRAL_SENTENCES + NEUTRAL_COLLOQUIAL
     while len(buckets[0]) < target_per_class:
         buckets[0].append({"text": rng.choice(neutral_pool), "label": 0, "spans": []})
 
-    dataset: list[dict] = []
+    dataset = []
     for c in (0, 1, 2, 3):
         dataset.extend(buckets[c])
     rng.shuffle(dataset)
@@ -320,8 +390,33 @@ def build_sentiment_dataset(target_samples: int = 12000, max_seq_len: int = 64) 
     return dataset
 
 
+def word_coverage_report(dataset=None) -> dict:
+    """统计每个词在数据集里的样本量，用于验证"无死角覆盖"这一不变量。"""
+    from collections import Counter
+    if dataset is None:
+        dataset = build_sentiment_dataset()
+    per_word = {c: Counter() for c in (1, 2, 3)}
+    for item in dataset:
+        for s in item.get("spans", []):
+            per_word[s["label"]][s["word"]] += 1
+    report = {}
+    for c in (1, 2, 3):
+        vocab = LEXICON_BY_CAT[c]
+        cnt = per_word[c]
+        vals = sorted((cnt[w] for w in vocab), reverse=True)
+        report[c] = {
+            "n_words": len(vocab),
+            "covered": sum(1 for w in vocab if cnt[w] > 0),
+            "zero": [w for w in vocab if cnt[w] == 0],
+            "min": min(vals), "median": vals[len(vals) // 2], "max": max(vals),
+        }
+    return report
+
+
 if __name__ == "__main__":
-    ds = build_sentiment_dataset(target_samples=2000)
+    ds = build_sentiment_dataset(target_samples=4000)
     print()
-    for x in ds[:6]:
-        print(f"[{x['label']}] '{x['text']}' -> {[(s['word'], s['start'], s['end']) for s in x['spans']]}")
+    rep = word_coverage_report(ds)
+    for c, r in rep.items():
+        print(f"类别 {c}: 覆盖 {r['covered']}/{r['n_words']} 词  "
+              f"min={r['min']} 中位={r['median']} max={r['max']}  未覆盖={r['zero']}")
