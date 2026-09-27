@@ -1,14 +1,12 @@
-"""Interactive and CLI demo for Robust Autoregressive Slice Emission with Long Document Segmentation.
+"""DTSeek 增强型自回归切片生成与长文档高亮演示入口。
 
-Features:
-1. Sentence/Clause Segmentation Engine:
-   Automatically splits arbitrary long paragraphs (thousands of tokens) into natural clauses while
-   tracking exact global 1-based character offsets!
-2. Model Invariance:
-   Processes each segment within its optimal receptive field (<= 64 tokens), completely preventing
-   truncation loss and positional encoding degradation.
-3. Global Highlight Presentation:
-   Recombines all sub-sentence anchors and highlights the full long text accurately!
+核心特性：
+1. 标点感知自适应分句引擎：
+   自动将数千字的长篇大论拆解为短句，同时无损追踪全局 1-based 字符坐标；
+2. 保持最优感受野：
+   确保每个切片检测任务均在小模型的敏锐注意力窗口内（<= 64 字符）执行，彻底消灭截断丢失与位置编码退化；
+3. 全局字符级高亮呈现：
+   聚合各子句检测出的切片锚点，在完整长文本上进行终端 ANSI 下划线与彩色高亮渲染。
 """
 import argparse
 import os

@@ -1,9 +1,10 @@
-"""Core architecture of DTSeek with YOLO/DETR-style Detection Head.
+"""DTSeek 动态切片决策模型核心架构定义。
 
-Outputs:
-1. Category Classification: Logits per candidate class Query + Background Class.
-2. Span Localization (1D Bounding Box): Normalized (center, width) -> (start_token, end_token) in document.
-3. Objectness / Confidence: Probability that the detected trigger exists and is valid.
+包含模块：
+1. Doc Encoder 文本特征提取器（对长文本单次前向编码）
+2. 候选类别 Query 投影层（注入常驻学习式背景类 Q_null，防止强制归类）
+3. DETR 风格 Cross-Decoder 解码交互层（类别自注意力建模互斥性 + 跨模态文本特征检索）
+4. 双头输出层（分类打分头 + 1D 边界切片回归头 + 置信度判决头）
 """
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
@@ -25,9 +26,9 @@ class DTSeekConfig:
 
 
 class CategoryQueryProjector(nn.Module):
-    """Maps candidate class descriptions or pre-embedded labels into D-dimensional Queries.
+    """候选类别 Query 投射器：将类别描述或预设 ID 映射为 D 维查询向量。
     
-    Includes a learned background token (Q_null) similar to DETR's no-object token.
+    自动引入常驻学习式背景类（Q_null），类似于目标检测中的 No-Object 槽位。
     """
     def __init__(self, hidden_dim: int, use_background_class: bool = True):
         super().__init__()
@@ -51,10 +52,10 @@ class CategoryQueryProjector(nn.Module):
 
 
 class DETRDecoderLayer(nn.Module):
-    """DETR-style Decoder layer:
-    1. Self-Attention between queries (models category competition / mutual exclusion).
-    2. Cross-Attention from queries to document memory.
-    3. FFN.
+    """DETR 风格交叉注意力解码层：
+    1. Query 之间自注意力（Self-Attention）：学习类别间的竞争与互斥关系；
+    2. Query 查询文本记忆（Cross-Attention）：主动检索输入文本中的证据；
+    3. FFN 前馈网络。
     """
     def __init__(self, hidden_dim: int, num_heads: int, dropout: float = 0.1):
         super().__init__()
@@ -80,25 +81,25 @@ class DETRDecoderLayer(nn.Module):
         doc_mask: Optional[torch.Tensor] = None,
         query_mask: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-        # 1. Self Attention across queries
+        # 1. Query 之间的自注意力计算
         key_padding_mask = ~query_mask if query_mask is not None else None
         q_norm = self.norm1(queries)
         q2, _ = self.self_attn(q_norm, q_norm, q_norm, key_padding_mask=key_padding_mask)
         queries = queries + q2
 
-        # 2. Cross Attention: Queries attend to Doc Memory
+        # 2. 跨模态注意力：Query 检索文本特征图
         doc_padding_mask = ~doc_mask if doc_mask is not None else None
         q_norm = self.norm2(queries)
         q_cross, _ = self.cross_attn(q_norm, doc_memory, doc_memory, key_padding_mask=doc_padding_mask)
         queries = queries + q_cross
 
-        # 3. FFN
+        # 3. 前馈网络
         queries = queries + self.ffn(self.norm3(queries))
         return queries
 
 
 class DTSeekModel(nn.Module):
-    """DTSeek End-to-End Decision & Detection Model (YOLO/DETR paradigm)."""
+    """DTSeek 端到端决策与语句切片检测模型。"""
 
     def __init__(self, config: DTSeekConfig, doc_encoder: Optional[nn.Module] = None):
         super().__init__()
@@ -106,18 +107,18 @@ class DTSeekModel(nn.Module):
         self.doc_encoder = doc_encoder
         self.hidden_dim = config.hidden_dim
 
-        # 1. Query Projector
+        # 1. 类别 Query 投射器
         self.query_projector = CategoryQueryProjector(config.hidden_dim, config.use_background_class)
 
-        # 2. Cross-Decoder Stack
+        # 2. 交叉解码器堆叠
         self.decoder_layers = nn.ModuleList([
             DETRDecoderLayer(config.hidden_dim, config.num_heads, config.dropout)
             for _ in range(config.num_decoder_layers)
         ])
         self.final_norm = nn.LayerNorm(config.hidden_dim)
 
-        # 3. Output Heads (YOLO style: Class + 1D Box Span + Objectness)
-        # 3.1 Category Scorer: output classification logit per query
+        # 3. 输出头（类别打分 + 1D 切片回归 + 置信度判决）
+        # 3.1 分类打分头
         self.cat_scorer = nn.Sequential(
             nn.Linear(config.hidden_dim, config.hidden_dim),
             nn.LayerNorm(config.hidden_dim),
@@ -126,15 +127,15 @@ class DTSeekModel(nn.Module):
             nn.Linear(config.hidden_dim, 1),
         )
 
-        # 3.2 Span Localization Head (1D Box regression): (center, width) in [0, 1]
+        # 3.2 语句切片回归头：输出归一化的 (center, width)
         self.span_head = nn.Sequential(
             nn.Linear(config.hidden_dim, config.hidden_dim),
             nn.GELU(),
             nn.Linear(config.hidden_dim, 2),
-            nn.Sigmoid(),  # Output normalized (center, width)
+            nn.Sigmoid(),
         )
 
-        # 3.3 Objectness / Confidence Head: predict detection reliability
+        # 3.3 置信度头：综合评估决策的可靠性与置信度
         self.act_head = nn.Sequential(
             nn.Linear(config.hidden_dim + 4, 128),
             nn.GELU(),
@@ -145,12 +146,13 @@ class DTSeekModel(nn.Module):
         self.register_buffer("temperature", torch.tensor(config.temperature_init))
 
     def encode_doc(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """运行文档编码器提取长文本记忆特征图。"""
         if self.doc_encoder is not None:
             output = self.doc_encoder(input_ids=input_ids, attention_mask=attention_mask)
             if hasattr(output, "last_hidden_state"):
                 return output.last_hidden_state
             return output
-        raise NotImplementedError("Doc encoder not provided; pass doc_memory directly.")
+        raise NotImplementedError("未配置文档编码器，请直接传递 doc_memory。")
 
     def forward(
         self,
@@ -159,17 +161,6 @@ class DTSeekModel(nn.Module):
         doc_mask: Optional[torch.Tensor] = None,
         query_mask: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
-        """
-        Returns:
-            Dict containing:
-                logits: [Batch, TotalQueries]
-                probs: [Batch, TotalQueries]
-                spans: [Batch, TotalQueries, 2] -> normalized (center, width)
-                span_bounds: [Batch, TotalQueries, 2] -> normalized (start, end)
-                confidence: [Batch, 1]
-                best_index: [Batch]
-                is_background: [Batch]
-        """
         B, C, D = class_embeddings.shape
         if self.query_projector.use_background_class:
             queries, q_mask = self.query_projector(class_embeddings)
@@ -177,25 +168,25 @@ class DTSeekModel(nn.Module):
             queries = class_embeddings
             q_mask = query_mask if query_mask is not None else torch.ones(B, C, dtype=torch.bool, device=queries.device)
 
-        # Run DETR-style Cross-Decoder
+        # 逐层运行 DETR 交叉解码
         for layer in self.decoder_layers:
             queries = layer(queries, doc_memory, doc_mask=doc_mask, query_mask=q_mask)
         queries = self.final_norm(queries)
 
-        # 1. Category Classification Logits & Probs
-        logits = self.cat_scorer(queries).squeeze(-1)  # [B, TotalQueries]
+        # 1. 预测类别 Logits 与归一化概率
+        logits = self.cat_scorer(queries).squeeze(-1)
         scaled_logits = logits / torch.clamp(self.temperature, min=0.1, max=10.0)
         probs = F.softmax(scaled_logits, dim=-1)
 
-        # 2. YOLO-style 1D Span Localization (center, width) -> (start, end)
-        spans = self.span_head(queries)  # [B, TotalQueries, 2] (center, width)
+        # 2. 预测语句切片归一化区间 (center, width) -> (start, end)
+        spans = self.span_head(queries)
         center = spans[..., 0]
         width = spans[..., 1]
         start = (center - width / 2.0).clamp(min=0.0, max=1.0)
         end = (center + width / 2.0).clamp(min=0.0, max=1.0)
         span_bounds = torch.stack([start, end], dim=-1)
 
-        # 3. Objectness & Confidence Estimation
+        # 3. 统计特征提取与置信度估计
         p = probs.detach()
         num_classes = p.shape[-1]
         top1 = p.topk(1, dim=-1).values
