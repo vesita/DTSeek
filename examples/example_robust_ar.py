@@ -19,10 +19,10 @@ from dtseek.robust_ar_model import RobustARSliceDecoder
 from dtseek.segmenter import split_with_global_offsets
 
 CLASSES = [
-    {"id": 0, "name": "无代词(背景)", "color": "\033[90m"},      # 灰色
-    {"id": 1, "name": "第一人称",    "color": "\033[1;36m"},    # 青色加粗
-    {"id": 2, "name": "第二人称",    "color": "\033[1;32m"},    # 绿色加粗
-    {"id": 3, "name": "第三人称",    "color": "\033[1;33m"},    # 黄色加粗
+    {"id": 0, "name": "无代词(背景)", "color": "\033[90m",      "bg": "\033[100m"},     # 灰色暗淡
+    {"id": 1, "name": "第一人称",    "color": "\033[1;96;44m",  "bg": "\033[44m"},      # 亮青字+深蓝底高亮 (对比极强)
+    {"id": 2, "name": "第二人称",    "color": "\033[1;93;41m",  "bg": "\033[41m"},      # 亮黄字+深红底高亮 (与青蓝截然不同)
+    {"id": 3, "name": "第三人称",    "color": "\033[1;97;45m",  "bg": "\033[45m"},      # 亮白字+品紫底高亮
 ]
 RESET = "\033[0m"
 

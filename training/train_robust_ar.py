@@ -63,12 +63,12 @@ class RobustARDataset(Dataset):
         }
 
 
-def train_fast_robust(num_epochs: int = 6, batch_size: int = 128, lr: float = 1e-3):
+def train_fast_robust(num_epochs: int = 8, batch_size: int = 128, lr: float = 1e-3):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
     tokenizer = NanoCharTokenizer()
-    all_data = build_rich_ar_dataset(target_samples=5000)
+    all_data = build_rich_ar_dataset(target_samples=8000)
     val_size = int(len(all_data) * 0.1)
     train_data = all_data[val_size:]
     val_data = all_data[:val_size]
