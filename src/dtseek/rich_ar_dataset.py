@@ -9,10 +9,8 @@ v1 的致命缺陷（已定位）：
 v2 修复：四个桶各自独立填到配额（互不 early-break），并显式给背景句 32% 配额。
 """
 import glob
-import os
 import random
 import re
-from typing import Dict, List
 
 PRONOUN_MAP = [
     (1, ["我们", "咱们", "鄙人", "在下", "我", "俺", "咱"]),
@@ -56,7 +54,7 @@ NEUTRAL_POOL = [
 ]
 
 
-def extract_all_spans(text: str) -> List[Dict]:
+def extract_all_spans(text: str) -> list[dict]:
     """找出句中所有不重叠的代词切片（长词优先，避免"我们"被拆成"我"）。"""
     spans = []
     occupied = [False] * len(text)
@@ -85,7 +83,7 @@ def extract_all_spans(text: str) -> List[Dict]:
 
 
 def build_rich_ar_dataset(target_samples: int = 15000, max_seq_len: int = 64,
-                          bg_ratio: float = 0.32, synthetic_ratio: float = 0.20) -> List[Dict]:
+                          bg_ratio: float = 0.32, synthetic_ratio: float = 0.20) -> list[dict]:
     """构建代词任务数据集。
 
     Args:

@@ -1,4 +1,4 @@
-"""DTSeek 参数有效性与有效秩（Effective Rank / SVD Spectrum）分析脚本。
+r"""DTSeek 参数有效性与有效秩（Effective Rank / SVD Spectrum）分析脚本。
 
 借鉴 nanoSeek 物理测量纪律与学术分析方法：
 1. 模块参数量统计（总参数、可学习参数、占比分布、死参数/零梯度探测）
@@ -9,8 +9,6 @@
    - 探测解码器层间隐藏态是否发生表征退化（Representation Collapse）。
 """
 import math
-import os
-from typing import Tuple, Dict, List
 import torch
 import torch.nn as nn
 import numpy as np
@@ -20,7 +18,7 @@ from dtseek.doc_encoder import SimpleDocEncoder
 from dtseek.robust_ar_model import RobustARSliceDecoder
 
 
-def compute_effective_rank(W: torch.Tensor) -> Tuple[float, float, int]:
+def compute_effective_rank(W: torch.Tensor) -> tuple[float, float, int]:
     """Computes effective rank using entropy of normalized singular values.
     
     Returns:

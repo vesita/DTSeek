@@ -18,10 +18,8 @@ v2 修复（本期）：
   2. 模板合成：为词典里的每个词构造多种上下文，补足真实语料覆盖不到的词。
 """
 import glob
-import os
 import random
 import re
-from typing import Dict, List, Tuple
 
 # ---------------------------------------------------------------------------
 # 情绪词典 v2（~190 词）
@@ -206,7 +204,7 @@ def _is_negated(text: str, start: int, window: int = 3) -> bool:
     return any(neg in prefix for neg in ("不", "没", "别", "未", "无", "非"))
 
 
-def extract_emotion_spans(text: str) -> Tuple[int, List[Dict]]:
+def extract_emotion_spans(text: str) -> tuple[int, list[dict]]:
     """提取句子中的情绪词切片与主导情绪类别。
 
     Returns:
@@ -251,7 +249,7 @@ def extract_emotion_spans(text: str) -> Tuple[int, List[Dict]]:
     return categories[0], spans
 
 
-def _mine_real(buckets: Dict[int, List[Dict]], target_per_class: int, max_seq_len: int):
+def _mine_real(buckets: dict[int, list[dict]], target_per_class: int, max_seq_len: int):
     """用扩充后的词典从真实对话语料挖掘情绪句。"""
     files = sorted(glob.glob("/home/vesita/coding/my/nanoSeek/data/chinese/*dialogue.txt"))
     for f in files:
@@ -271,7 +269,7 @@ def _mine_real(buckets: Dict[int, List[Dict]], target_per_class: int, max_seq_le
                         buckets[cat_id].append({"text": s, "label": cat_id, "spans": spans})
 
 
-def _synthesize(buckets: Dict[int, List[Dict]], target_per_class: int, rng: random.Random):
+def _synthesize(buckets: dict[int, list[dict]], target_per_class: int, rng: random.Random):
     """真实语料不够时用模板合成补齐（保证每个词都有多种上下文）。"""
     for cat in (1, 2, 3):
         words = LEXICON_BY_CAT[cat]
@@ -287,7 +285,7 @@ def _synthesize(buckets: Dict[int, List[Dict]], target_per_class: int, rng: rand
                 buckets[cat].append({"text": s, "label": cat, "spans": spans})
 
 
-def build_sentiment_dataset(target_samples: int = 12000, max_seq_len: int = 64) -> List[Dict]:
+def build_sentiment_dataset(target_samples: int = 12000, max_seq_len: int = 64) -> list[dict]:
     """构建情绪切片数据集：真实挖掘优先，模板合成补齐，背景类等量配平。"""
     # fail-closed：中性池被污染时立刻报错，而不是训出一个误判模型
     _validate_neutral_purity()
@@ -295,7 +293,7 @@ def build_sentiment_dataset(target_samples: int = 12000, max_seq_len: int = 64) 
     rng = random.Random(20240927)
     target_per_class = target_samples // 4
 
-    buckets: Dict[int, List[Dict]] = {0: [], 1: [], 2: [], 3: []}
+    buckets: dict[int, list[dict]] = {0: [], 1: [], 2: [], 3: []}
 
     print(f"  情绪数据集目标：每类 {target_per_class} 条（词典 {len(LEXICON_INDEX)} 词）")
     _mine_real(buckets, target_per_class, max_seq_len)
@@ -311,7 +309,7 @@ def build_sentiment_dataset(target_samples: int = 12000, max_seq_len: int = 64) 
     while len(buckets[0]) < target_per_class:
         buckets[0].append({"text": rng.choice(neutral_pool), "label": 0, "spans": []})
 
-    dataset: List[Dict] = []
+    dataset: list[dict] = []
     for c in (0, 1, 2, 3):
         dataset.extend(buckets[c])
     rng.shuffle(dataset)

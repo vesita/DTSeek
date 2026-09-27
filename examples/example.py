@@ -1,12 +1,11 @@
 """Interactive and CLI evaluation example for DTSeek pronoun decision model."""
 import argparse
 import os
-import sys
 import torch
 
 from dtseek.tokenizer import NanoCharTokenizer
 from dtseek.doc_encoder import SimpleDocEncoder
-from dtseek.model import DTSeekConfig, DTSeekModel
+from dtseek.model import DTSeekModel
 
 
 CLASSES = [

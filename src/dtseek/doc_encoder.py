@@ -1,5 +1,4 @@
 """Embedding-based Doc Encoder for DTSeek when training from scratch with nanoSeek vocabulary."""
-import math
 import torch
 import torch.nn as nn
 

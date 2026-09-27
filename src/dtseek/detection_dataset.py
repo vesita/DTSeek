@@ -6,17 +6,15 @@ For each sentence:
   - Normalized Box: (center, width) in [0, 1] relative to sequence length
 """
 import glob
-import os
 import random
 import re
-from typing import Dict, List, Optional, Tuple
 
 PRONOUNS_1ST = ["我们", "咱们", "鄙人", "在下", "我", "俺", "咱"]
 PRONOUNS_2ND = ["你们", "阁下", "你", "您"]
 PRONOUNS_3RD = ["他们", "她们", "它们", "他", "她", "它"]
 
 
-def find_pronoun_span(text: str) -> Tuple[int, int, int, str]:
+def find_pronoun_span(text: str) -> tuple[int, int, int, str]:
     """Finds single unambiguous pronoun and its character span (start, end).
     
     Returns:
@@ -54,9 +52,9 @@ def find_pronoun_span(text: str) -> Tuple[int, int, int, str]:
     return cat, start, end, word
 
 
-def build_detection_dataset(target_per_class: int = 4000, max_seq_len: int = 64) -> List[Dict]:
+def build_detection_dataset(target_per_class: int = 4000, max_seq_len: int = 64) -> list[dict]:
     corpora_files = sorted(glob.glob("/home/vesita/coding/my/nanoSeek/data/chinese/*dialogue.txt"))
-    buckets: Dict[int, List[Dict]] = {0: [], 1: [], 2: [], 3: []}
+    buckets: dict[int, list[dict]] = {0: [], 1: [], 2: [], 3: []}
 
     print("Harvesting YOLO-style detection spans from nanoSeek corpora...")
     for f in corpora_files:

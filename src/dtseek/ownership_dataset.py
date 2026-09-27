@@ -9,10 +9,7 @@
 从真实对话日志中挖掘角色标识与归属声明。
 """
 import glob
-import os
 import random
-import re
-from typing import Dict, List, Tuple
 
 SPEAKER_MAP = [
     # 类别 1: 用户/客户
@@ -60,7 +57,7 @@ DIALOGUE_TEMPLATES = [
 ]
 
 
-def extract_speaker_spans(text: str) -> List[Dict]:
+def extract_speaker_spans(text: str) -> list[dict]:
     spans = []
     occupied = [False] * len(text)
 
@@ -93,7 +90,7 @@ def extract_speaker_spans(text: str) -> List[Dict]:
 
 
 def build_ownership_dataset(target_samples: int = 10000, max_seq_len: int = 64,
-                            bg_ratio: float = 0.30) -> List[Dict]:
+                            bg_ratio: float = 0.30) -> list[dict]:
     """构建归属人切片数据集。
 
     v1 缺陷：背景句只占 10%（`target_samples * 0.1`），且模板句里三类别严重不均，

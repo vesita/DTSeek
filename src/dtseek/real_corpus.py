@@ -10,7 +10,6 @@ import glob
 import os
 import random
 import re
-from typing import Dict, List, Tuple
 
 # Exact pronoun groups
 PRONOUNS_1ST = {"我", "我们", "咱们", "俺", "鄙人", "在下", "咱"}
@@ -20,7 +19,7 @@ PRONOUNS_3RD = {"他", "她", "它", "他们", "她们", "它们"}
 ALL_PRONOUNS = PRONOUNS_1ST | PRONOUNS_2ND | PRONOUNS_3RD
 
 
-def split_sentences(text: str) -> List[str]:
+def split_sentences(text: str) -> list[str]:
     """Splits multi-turn dialogues into clean individual sentences."""
     # Remove role tags like '用户：' or '模型：'
     text = re.sub(r"^(用户|模型|系统|提问|回答|User|Assistant)[:：]\s*", "", text.strip())
@@ -61,14 +60,14 @@ def label_sentence(s: str) -> int:
 def build_real_pronoun_dataset(
     target_per_class: int = 10000,
     seed: int = 42,
-) -> List[Dict]:
+) -> list[dict]:
     """Extracts, filters, and balances real Chinese sentences directly from nanoSeek dialogue corpora."""
     random.seed(seed)
     corpora_files = sorted(glob.glob("/home/vesita/coding/my/nanoSeek/data/chinese/*dialogue.txt"))
     if not corpora_files:
         raise FileNotFoundError("nanoSeek corpora not found!")
 
-    buckets: Dict[int, List[str]] = {0: [], 1: [], 2: [], 3: []}
+    buckets: dict[int, list[str]] = {0: [], 1: [], 2: [], 3: []}
     collected_total = 0
 
     print("Harvesting real Chinese sentences from nanoSeek corpora...")

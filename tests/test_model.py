@@ -1,6 +1,5 @@
-import pytest
 import torch
-from dtseek import DTSeekConfig, DTSeekModel, DTSeekEngine
+from dtseek import DTSeekConfig, DTSeekModel
 
 
 def test_dtseek_model_shapes():

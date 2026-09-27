@@ -2,7 +2,6 @@
 
 Optimized to run batches swiftly without Python-level scipy loop overhead.
 """
-from typing import Dict, List, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -20,8 +19,8 @@ class HungarianMatcher(nn.Module):
         self,
         pred_logits: torch.Tensor,   # [B, K, C]
         pred_spans: torch.Tensor,    # [B, K, 2]
-        targets: List[Dict],
-    ) -> List[Tuple[torch.Tensor, torch.Tensor]]:
+        targets: list[dict],
+    ) -> list[tuple[torch.Tensor, torch.Tensor]]:
         B, K, C = pred_logits.shape
         out_prob = pred_logits.softmax(-1)  # [B, K, C]
 
@@ -66,8 +65,8 @@ class SetCriterion(nn.Module):
         pred_spans: torch.Tensor,   # [B, K, 2]
         pred_bounds: torch.Tensor,  # [B, K, 2]
         pred_conf: torch.Tensor,    # [B, K]
-        targets: List[Dict],
-    ) -> Dict[str, torch.Tensor]:
+        targets: list[dict],
+    ) -> dict[str, torch.Tensor]:
         indices = self.matcher(pred_logits, pred_spans, targets)
         B, K, C = pred_logits.shape
 

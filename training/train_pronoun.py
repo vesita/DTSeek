@@ -1,6 +1,5 @@
 """Production-grade training script with Orthogonal Query Projector & Full Evaluation Suite."""
 import os
-import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

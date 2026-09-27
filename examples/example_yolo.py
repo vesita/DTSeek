@@ -2,11 +2,10 @@
 import argparse
 import os
 import torch
-import torch.nn.functional as F
 
 from nano_char_tokenizer import NanoCharTokenizer
 from dtseek.doc_encoder import SimpleDocEncoder
-from dtseek.model import DTSeekConfig, DTSeekModel
+from dtseek.model import DTSeekModel
 from dtseek.query_projector import TextGuidedQueryProjector
 
 CLASSES = [

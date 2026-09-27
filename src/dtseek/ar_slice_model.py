@@ -10,12 +10,9 @@ Architecture:
    If <cont>, feed previously predicted slice embedding back into decoder -> predict next slice!
    If <eos> or max_slices reached -> Finish!
 """
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class AutoregressiveSliceDecoder(nn.Module):
@@ -58,8 +55,8 @@ class AutoregressiveSliceDecoder(nn.Module):
         self,
         query_history: torch.Tensor,     # [B, step_len, D]
         doc_memory: torch.Tensor,        # [B, L, D]
-        doc_mask: Optional[torch.Tensor] = None,
-    ) -> Dict[str, torch.Tensor]:
+        doc_mask: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
         """Runs single autoregressive step.
         Returns:
             cls_logits: [B, num_classes]

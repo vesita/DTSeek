@@ -4,7 +4,6 @@ Combines:
 2. Localization Span Loss (L_box): L1 + GIoU loss on character span (center, width) for non-background tokens.
 3. Objectness / Confidence Loss (L_conf): Binary Cross-Entropy matching detection presence.
 """
-from typing import Dict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -55,7 +54,7 @@ class YOLODetectionLoss(nn.Module):
         target_labels: torch.Tensor,     # [B] (0: null, 1..3)
         target_spans: torch.Tensor,      # [B, 2] (center, width)
         target_bounds: torch.Tensor,     # [B, 2] (start, end)
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         # 1. Classification Loss
         l_cls = F.cross_entropy(pred_logits, target_labels)
 

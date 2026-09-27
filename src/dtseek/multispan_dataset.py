@@ -8,10 +8,8 @@ e.g. "我把方案发给你，他在等我们" contains:
   - "我们": [14, 15], Class 1
 """
 import glob
-import os
 import random
 import re
-from typing import Dict, List, Tuple
 
 PRONOUN_MAP = [
     (1, ["我们", "咱们", "鄙人", "在下", "我", "俺", "咱"]),
@@ -20,7 +18,7 @@ PRONOUN_MAP = [
 ]
 
 
-def extract_all_spans(text: str) -> List[Dict]:
+def extract_all_spans(text: str) -> list[dict]:
     """Finds all non-overlapping pronoun spans in a sentence."""
     spans = []
     occupied = [False] * len(text)
@@ -57,7 +55,7 @@ def extract_all_spans(text: str) -> List[Dict]:
     return spans
 
 
-def build_multispan_dataset(target_samples: int = 12000, max_seq_len: int = 64) -> List[Dict]:
+def build_multispan_dataset(target_samples: int = 12000, max_seq_len: int = 64) -> list[dict]:
     corpora_files = sorted(glob.glob("/home/vesita/coding/my/nanoSeek/data/chinese/*dialogue.txt"))
     dataset = []
 

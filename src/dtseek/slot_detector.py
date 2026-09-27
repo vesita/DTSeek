@@ -6,8 +6,6 @@ Each slot independently predicts:
 2. Span: (center, width) -> [start, end]
 3. Confidence: objectness probability
 """
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -57,14 +55,14 @@ class SpanSlotDecoder(nn.Module):
     def forward(
         self,
         doc_memory: torch.Tensor,
-        doc_mask: Optional[torch.Tensor] = None,
-    ) -> Dict[str, torch.Tensor]:
+        doc_mask: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
         """
         Args:
             doc_memory: [B, L_doc, D]
             doc_mask: [B, L_doc] (True = valid, False = pad)
         Returns:
-            Dict:
+            dict:
                 logits: [B, num_slots, num_classes]
                 probs: [B, num_slots, num_classes]
                 spans: [B, num_slots, 2] (center, width)

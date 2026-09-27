@@ -35,7 +35,6 @@
     doc_memory = encoder(input_ids, attention_mask)   # [B, L, D]
 """
 import math
-from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -147,7 +146,7 @@ class NanoAttention(nn.Module):
         self.attn_scale = 1.0 / math.sqrt(self.head_dim)
 
     def forward(self, x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor,
-                attn_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+                attn_mask: torch.Tensor | None = None) -> torch.Tensor:
         """
         Args:
             x: [B, T, D]
@@ -235,7 +234,7 @@ class NanoDocEncoder(nn.Module):
         self.register_buffer("rope_sin", sin, persistent=False)
 
     def forward(self, input_ids: torch.Tensor,
-                attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+                attention_mask: torch.Tensor | None = None) -> torch.Tensor:
         """Args:
             input_ids: [B, L] 字符 token id
             attention_mask: [B, L]，1 = 有效，0 = padding（可选）

@@ -7,7 +7,6 @@
 4. 双头输出层（分类打分头 + 1D 边界切片回归头 + 置信度判决头）
 """
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -39,7 +38,7 @@ class CategoryQueryProjector(nn.Module):
         else:
             self.null_query = None
 
-    def forward(self, class_embeddings: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, class_embeddings: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         B, C, D = class_embeddings.shape
         if self.use_background_class:
             null_expanded = self.null_query.expand(B, 1, D)
@@ -78,8 +77,8 @@ class DETRDecoderLayer(nn.Module):
         self,
         queries: torch.Tensor,
         doc_memory: torch.Tensor,
-        doc_mask: Optional[torch.Tensor] = None,
-        query_mask: Optional[torch.Tensor] = None,
+        doc_mask: torch.Tensor | None = None,
+        query_mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
         # 1. Query 之间的自注意力计算
         key_padding_mask = ~query_mask if query_mask is not None else None
@@ -101,7 +100,7 @@ class DETRDecoderLayer(nn.Module):
 class DTSeekModel(nn.Module):
     """DTSeek 端到端决策与语句切片检测模型。"""
 
-    def __init__(self, config: DTSeekConfig, doc_encoder: Optional[nn.Module] = None):
+    def __init__(self, config: DTSeekConfig, doc_encoder: nn.Module | None = None):
         super().__init__()
         self.config = config
         self.doc_encoder = doc_encoder
@@ -145,7 +144,7 @@ class DTSeekModel(nn.Module):
 
         self.register_buffer("temperature", torch.tensor(config.temperature_init))
 
-    def encode_doc(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def encode_doc(self, input_ids: torch.Tensor, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
         """运行文档编码器提取长文本记忆特征图。"""
         if self.doc_encoder is not None:
             output = self.doc_encoder(input_ids=input_ids, attention_mask=attention_mask)
@@ -158,9 +157,9 @@ class DTSeekModel(nn.Module):
         self,
         class_embeddings: torch.Tensor,
         doc_memory: torch.Tensor,
-        doc_mask: Optional[torch.Tensor] = None,
-        query_mask: Optional[torch.Tensor] = None,
-    ) -> Dict[str, torch.Tensor]:
+        doc_mask: torch.Tensor | None = None,
+        query_mask: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
         B, C, D = class_embeddings.shape
         if self.query_projector.use_background_class:
             queries, q_mask = self.query_projector(class_embeddings)

@@ -4,11 +4,9 @@ Uses text-encoded category definitions rather than unconstrained random vectors,
 ensuring Query vectors are anchored in true semantic feature space and preventing
 representation collapse.
 """
-from typing import Dict, List, Optional, Tuple
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class TextGuidedQueryProjector(nn.Module):
@@ -33,7 +31,7 @@ class TextGuidedQueryProjector(nn.Module):
         # LayerNorm to keep query scale bounded
         self.query_norm = nn.LayerNorm(hidden_dim)
 
-    def forward(self, batch_size: int = 1) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, batch_size: int = 1) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Returns:
             queries: [Batch, TotalQueries, HiddenDim]

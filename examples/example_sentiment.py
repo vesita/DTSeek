@@ -16,7 +16,6 @@
 """
 import argparse
 import os
-from typing import Dict, List
 
 import torch
 import torch.nn.functional as F
@@ -73,7 +72,7 @@ class SentimentSlicePredictor:
         self.decoder.eval()
 
     @torch.no_grad()
-    def _run_segment(self, segment_text: str, max_steps: int = 4) -> List[Dict]:
+    def _run_segment(self, segment_text: str, max_steps: int = 4) -> list[dict]:
         enc = self.tokenizer.encode(segment_text, max_length=64, padding=True)
         inp = torch.tensor([enc["input_ids"]], device=self.device)
         mask = torch.tensor([enc["attention_mask"]], dtype=torch.bool, device=self.device)
@@ -122,13 +121,13 @@ class SentimentSlicePredictor:
 
         return anchors
 
-    def predict(self, text: str) -> Dict:
+    def predict(self, text: str) -> dict:
         text = text.strip()
         if not text:
             return {"error": "输入文本不能为空"}
 
         segments = split_with_global_offsets(text, max_chunk_len=55)
-        global_anchors: List[Dict] = []
+        global_anchors: list[dict] = []
         for seg in segments:
             g0 = seg["global_start"]
             for a in self._run_segment(seg["text"]):
@@ -150,7 +149,7 @@ class SentimentSlicePredictor:
         }
 
 
-def render_highlighted_text(text: str, anchors: List[Dict]) -> str:
+def render_highlighted_text(text: str, anchors: list[dict]) -> str:
     if not anchors:
         return text
     styles = [None] * len(text)

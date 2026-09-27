@@ -10,7 +10,6 @@
 """
 import argparse
 import os
-from typing import Dict, List
 
 import torch
 import torch.nn.functional as F
@@ -71,7 +70,7 @@ class MultiTaskEngine:
         self.doc_encoder.eval()
 
         # 逐任务卡加载
-        self.decoders: Dict[str, RobustARSliceDecoder] = {}
+        self.decoders: dict[str, RobustARSliceDecoder] = {}
         for task, sd in ckpt["decoders"].items():
             dec = RobustARSliceDecoder(hidden_dim=hidden_dim, num_classes=4,
                                        num_heads=4, num_layers=2).to(self.device)
@@ -82,7 +81,7 @@ class MultiTaskEngine:
         self.tasks = list(self.decoders.keys())
 
     @torch.no_grad()
-    def _run_segment(self, task: str, segment_text: str, max_steps: int = 4) -> List[Dict]:
+    def _run_segment(self, task: str, segment_text: str, max_steps: int = 4) -> list[dict]:
         """在单个分句上跑一张任务卡的完整自回归发射。"""
         decoder = self.decoders[task]
         styles = TASK_STYLE[task]
@@ -137,7 +136,7 @@ class MultiTaskEngine:
 
         return anchors
 
-    def predict(self, text: str) -> Dict:
+    def predict(self, text: str) -> dict:
         """对所有任务卡并行输出（共享同一次基座编码，按需分句）。"""
         text = text.strip()
         if not text:
@@ -165,7 +164,7 @@ class MultiTaskEngine:
         return result
 
 
-def render(text: str, anchors: List[Dict]) -> str:
+def render(text: str, anchors: list[dict]) -> str:
     """按锚点索引在原文上做彩色下划线高亮。"""
     if not anchors:
         return text

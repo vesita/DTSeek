@@ -5,10 +5,8 @@
 2. 显式切片特征反馈（Explicit Feedback Projection）：每一步将上一轮预测的类别嵌入与位置向量投影回填，让模型明确感知“已扫描过哪些区域”；
 3. 双指针网络（Dual Pointer Network）：通过点积注意力直接索引文档文本的起止字符索引。
 """
-from typing import Dict, List, Optional, Tuple
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class RobustARSliceDecoder(nn.Module):
@@ -69,8 +67,8 @@ class RobustARSliceDecoder(nn.Module):
         self,
         query_sequence: torch.Tensor,    # [B, step_len, D]
         doc_memory: torch.Tensor,        # [B, L, D]
-        doc_mask: Optional[torch.Tensor] = None,
-    ) -> Dict[str, torch.Tensor]:
+        doc_mask: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
         B, step_len, D = query_sequence.shape
         L = doc_memory.shape[1]
         doc_pad_mask = ~doc_mask.bool() if doc_mask is not None else None

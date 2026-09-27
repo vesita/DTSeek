@@ -6,7 +6,6 @@ Following nanoSeek measurement disciplines (dev-notes/86 & AGENTS.md §5):
 3. Out-Of-Distribution (OOD) & Short sentence probes.
 4. ECE (Expected Calibration Error) calibration test.
 """
-from typing import Dict, List, Tuple
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
@@ -48,7 +47,7 @@ def evaluate_benchmark(
     tokenizer,
     device,
     val_loader: DataLoader = None,
-) -> Dict:
+) -> dict:
     """Runs rigorous multi-dimensional evaluation."""
     doc_encoder.eval()
     dtseek.eval()
@@ -115,7 +114,7 @@ def evaluate_benchmark(
     }
 
 
-def print_eval_report(eval_data: Dict):
+def print_eval_report(eval_data: dict):
     print("\n" + "=" * 65)
     print(f"  DTSeek 评估报告 (Probe Acc: {eval_data['probe_acc']*100:.1f}%)")
     print("=" * 65)

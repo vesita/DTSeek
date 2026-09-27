@@ -1,7 +1,5 @@
 """Training script for Dynamic Variable Multi-Span Classification Model (DETR paradigm)."""
-import os
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 
 from nano_char_tokenizer import NanoCharTokenizer

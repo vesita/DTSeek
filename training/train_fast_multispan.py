@@ -6,9 +6,7 @@ Distance-Weighted Matching (Greedy IoU / Center assignment), achieving:
 2. Perfect variable-count span output.
 3. Clean zero-slice background suppression.
 """
-import os
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 

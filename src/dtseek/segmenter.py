@@ -6,10 +6,9 @@
 3. 全局绝对字符坐标追踪：精确记录切分片段在原始长文档中的 0-based 与 1-based 全局起止位置，实现局部预测向整篇长文的无损复原。
 """
 import re
-from typing import Dict, List, Tuple
 
 
-def split_with_global_offsets(text: str, max_chunk_len: int = 50) -> List[Dict]:
+def split_with_global_offsets(text: str, max_chunk_len: int = 50) -> list[dict]:
     """将长文档切分为自然的语义子句，并精确记录在原长文档中的 0-based 起止绝对坐标。"""
     segments = []
     # 优先按句子结束标点或换行符分割

@@ -1,8 +1,7 @@
 """Pipeline for DTSeek: supporting dynamic task switching and multiple tokenizers."""
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import torch
-import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer
 
 from .model import DTSeekConfig, DTSeekModel
@@ -11,18 +10,18 @@ from .model import DTSeekConfig, DTSeekModel
 class TaskCartridge:
     """Represents a pluggable task head / vocabulary with its own category descriptions."""
 
-    def __init__(self, task_name: str, categories: List[Dict[str, str]], tokenizer=None, encoder=None):
+    def __init__(self, task_name: str, categories: list[dict[str, str]], tokenizer=None, encoder=None):
         """
         Args:
             task_name: e.g. "triage", "sentiment", "medical_diagnosis"
-            categories: List of dicts, e.g. [{"name": "billing", "desc": "invoices and payments"}, ...]
+            categories: list of dicts, e.g. [{"name": "billing", "desc": "invoices and payments"}, ...]
         """
         self.task_name = task_name
         self.categories = categories
         self.category_names = [c["name"] for c in categories]
         self.tokenizer = tokenizer
         self.encoder = encoder
-        self._cached_embeddings: Optional[torch.Tensor] = None
+        self._cached_embeddings: torch.Tensor | None = None
 
     def get_embeddings(self, device: torch.device, hidden_dim: int) -> torch.Tensor:
         """Returns [1, NumClasses, HiddenDim] class query representations."""
@@ -54,7 +53,7 @@ class DTSeekEngine:
         self,
         doc_model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
         hidden_dim: int = 384,
-        device: Optional[str] = None,
+        device: str | None = None,
     ):
         self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
         self.hidden_dim = hidden_dim
@@ -70,12 +69,12 @@ class DTSeekEngine:
         self.model.eval()
 
         # 3. Dynamic Task Registry
-        self.tasks: Dict[str, TaskCartridge] = {}
+        self.tasks: dict[str, TaskCartridge] = {}
 
     def register_task(
         self,
         task_name: str,
-        categories: List[Dict[str, str]],
+        categories: list[dict[str, str]],
         tokenizer=None,
         encoder=None,
     ) -> None:
@@ -90,9 +89,9 @@ class DTSeekEngine:
     def decide(
         self,
         doc_text: str,
-        task: Union[str, List[Dict[str, str]]],
+        task: str | list[dict[str, str]],
         max_doc_len: int = 1024,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Runs single-pass decision over document text against specified task categories."""
         # 1. Resolve Task Cartridge
         if isinstance(task, str):

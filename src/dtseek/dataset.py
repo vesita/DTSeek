@@ -1,6 +1,5 @@
 """Dataset generator for DTSeek pronoun task with rich, diverse templates."""
 import random
-from typing import Dict, List
 
 PRONOUN_MAP = {
     1: ["我", "我们", "咱们", "俺", "在下", "鄙人"],
@@ -48,7 +47,7 @@ CONTEXT_TEMPLATES = [
 ]
 
 
-def generate_pronoun_dataset(num_samples: int = 2400) -> List[Dict]:
+def generate_pronoun_dataset(num_samples: int = 2400) -> list[dict]:
     """Generates synthetic dataset balanced across classes 0, 1, 2, 3."""
     samples = []
     for _ in range(num_samples):

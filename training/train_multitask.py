@@ -17,10 +17,8 @@ loss 一路下降却完全没暴露——因为 loss 只衡量"平均拟合"，�
   2. span_hit     : 首切片起止区间与真值完全一致的比例（指针落点准不准）
   3. bg_fp        : 背景句被误报出切片的比例（中性句会不会乱开火，越低越好）
 """
-import os
 import json
 import random
-from typing import Dict, List
 
 import torch
 import torch.nn.functional as F
