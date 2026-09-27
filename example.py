@@ -39,10 +39,12 @@ class PronounPredictor:
         self.doc_encoder.load_state_dict(ckpt["doc_encoder"])
         self.doc_encoder.eval()
 
-        # Load DTSeek Model
+        # Load DTSeek Model (support both pure classification and span slice classification)
         self.model = DTSeekModel(self.config).to(self.device)
-        self.model.load_state_dict(ckpt["dtseek"])
+        self.model.load_state_dict(ckpt["dtseek"], strict=False)
         self.model.eval()
+
+        self.has_span_head = ("span_head.0.weight" in ckpt["dtseek"])
 
         # Handle backward compatibility: Query Projector or raw class_queries
         if "query_proj" in ckpt:
@@ -90,6 +92,21 @@ class PronounPredictor:
                 conf = float(out["confidence"][0].item())
                 is_bg = bool(out["is_background"][0].item())
 
+        # 语句切片分类（Span Slice Detection）: 提取 1-based 闭区间 [start, end]
+        L = len(text)
+        if self.has_span_head and pred_id != 0:
+            with torch.no_grad():
+                spans = self.model.span_head(q)  # [1, TotalQueries, 2]
+                center = spans[0, pred_id, 0].item()
+                width = spans[0, pred_id, 1].item()
+                start_0 = max(0, min(L - 1, int(round((center - width / 2.0) * L))))
+                end_0 = max(start_0 + 1, min(L, int(round((center + width / 2.0) * L))))
+                slice_span = [start_0 + 1, end_0]  # 1-based 闭区间
+                slice_text = text[start_0:end_0]
+        else:
+            slice_span = None
+            slice_text = ""
+
         prob_breakdown = {CLASSES[i]["name"]: round(probs_list[i], 4) for i in range(len(CLASSES))}
 
         return {
@@ -98,6 +115,8 @@ class PronounPredictor:
             "prediction_id": pred_id,
             "is_background": is_bg,
             "confidence": round(conf, 4),
+            "slice_span": slice_span,
+            "slice_text": slice_text,
             "probabilities": prob_breakdown,
         }
 
@@ -113,23 +132,25 @@ def main():
     # 1. 单次命令行模式
     if args.text:
         res = predictor.predict(args.text)
-        print("\n" + "=" * 50)
-        print(f"输入文本: {res['text']}")
-        print(f"判定结果: {res['prediction']}")
-        print(f"置信度:   {res['confidence']}")
+        print("\n" + "=" * 55)
+        print(f"输入文本:       {res['text']}")
+        print(f"判定结果:       {res['prediction']}")
+        print(f"置信度:         {res['confidence']}")
+        if res["slice_span"]:
+            print(f"语句切片定位:   [{res['slice_span'][0]}:{res['slice_span'][1]}] (1-based闭区间) -> '{res['slice_text']}'")
         print("类别概率分布:")
         for k, v in res["probabilities"].items():
             bar = "█" * int(v * 30)
             print(f"  {k:12s} : {v:.4f} {bar}")
-        print("=" * 50 + "\n")
+        print("=" * 55 + "\n")
         return
 
     # 2. 交互式命令行模式 (REPL)
-    print("\n" + "=" * 60)
-    print("  欢迎使用 DTSeek (DETR-Style 决策模型) 代词识别演示")
-    print("  请输入任意中文句子，模型将给出人称代词判断与置信度。")
+    print("\n" + "=" * 65)
+    print("  欢迎使用 DTSeek 语句切片分类 (Span Slice Classification) 演示")
+    print("  请输入任意中文句子，模型将同时输出类别判定与 1-based 闭区间切片定位。")
     print("  输入 'exit' 或 'quit' 退出。")
-    print("=" * 60 + "\n")
+    print("=" * 65 + "\n")
 
     while True:
         try:
@@ -140,7 +161,8 @@ def main():
                 print("退出。")
                 break
             res = predictor.predict(line)
-            print(f" -> 结果: \033[1;32m{res['prediction']}\033[0m (置信度: {res['confidence']})")
+            slice_info = f" | 切片定位: [{res['slice_span'][0]}:{res['slice_span'][1]}] '{res['slice_text']}'" if res["slice_span"] else ""
+            print(f" -> 结果: \033[1;32m{res['prediction']}\033[0m (置信度: {res['confidence']}){slice_info}")
             print("    概率分布: ", end="")
             for k, v in res["probabilities"].items():
                 print(f"{k}: {v*100:.1f}%  ", end="")
