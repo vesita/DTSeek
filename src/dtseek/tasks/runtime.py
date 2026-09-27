@@ -89,12 +89,18 @@ class GenericTaskDataset(Dataset):
         }
 
 
-def task_loss(decoder, doc_memory, mask, batch, spec: TaskSpec, device) -> torch.Tensor:
+def task_loss(decoder, doc_memory, mask, batch, spec: TaskSpec, device,
+              ndb=None) -> torch.Tensor:
     """单任务的自回归多步损失（教师强制）。
 
     分类损失对背景类（id=0）加权：背景句在自回归范式下只在第 0 步贡献 **一个**
     监督信号，而有切片的句子贡献 N 个信号 —— 天然被双重稀释。轻微上调背景类权重
     可抑制"永远开火"的退化解（v1 的中性句 100% 误报）。
+
+    `ndb`（`MentionNDB`，默认 None = 与旧行为逐位一致）：给身份槽任务接一段
+    **情节检索记忆**。每一步先用（真值或指针给的）起始位置查表，把检索到的身份分布
+    与分类头凸混合，再算损失；算出损失**之后**才把本步的真值 (起始字面 → label)
+    写进记忆 —— 读写顺序保证不会把本步答案喂给自己（见 `mention_ndb.py`）。
     """
     max_steps = spec.max_steps
     t_labels = batch["labels"].to(device)
@@ -109,20 +115,35 @@ def task_loss(decoder, doc_memory, mask, batch, spec: TaskSpec, device) -> torch
     cls_w = torch.tensor(spec.cls_weights(), device=device)
     act_w = torch.tensor(list(spec.action_weight), device=device)
 
+    input_ids = batch["input_ids"].to(device) if ndb is not None else None
+    if ndb is not None:
+        ndb.reset(B, device)          # 情节记忆：每批每条样本各一张空表
+
     q_seq = decoder.bos_query.expand(B, 1, -1)
     loss = torch.tensor(0.0, device=device)
 
     for s in range(max_steps):
         step_out = decoder.forward_step(q_seq, doc_memory, doc_mask=mask)
+        cls_logits = step_out["cls_logits"]
         m = step_mask[:, s]
+        if ndb is not None:
+            # 读在写之前：此刻表里只有**更早**那些提及的绑定，本步答案还没写进去
+            attn = ndb.read_attention(step_out["start_logits"], mask, t_starts[:, s])
+            cls_logits = ndb.read(cls_logits, step_out["last_hidden"].squeeze(1),
+                                  input_ids, attn)
         if m.sum() > 0:
-            l_cls = (F.cross_entropy(step_out["cls_logits"], t_labels[:, s],
+            l_cls = (F.cross_entropy(cls_logits, t_labels[:, s],
                                      weight=cls_w, reduction="none") * m).sum() / m.sum()
             l_s = (F.cross_entropy(step_out["start_logits"], t_starts[:, s], reduction="none") * m).sum() / m.sum()
             l_e = (F.cross_entropy(step_out["end_logits"], t_ends[:, s], reduction="none") * m).sum() / m.sum()
             l_act = (F.cross_entropy(step_out["action_logits"], t_actions[:, s],
                                      weight=act_w, reduction="none") * m).sum() / m.sum()
             loss = loss + (l_cls + spec.span_weight * l_s + spec.span_weight * l_e + l_act)
+
+        if ndb is not None:
+            with ndb.write_enabled():
+                ndb.write(step_out["last_hidden"].squeeze(1), input_ids,
+                          t_starts[:, s], t_labels[:, s], m)
 
         # 教师强制：用真值切片状态驱动下一步（训练稳定、并行度高）
         next_q = decoder.get_step_input(
@@ -137,7 +158,8 @@ def task_loss(decoder, doc_memory, mask, batch, spec: TaskSpec, device) -> torch
 
 
 @torch.no_grad()
-def evaluate_task(doc_encoder, decoder, loader, device, spec: TaskSpec, max_len: int = 64) -> dict:
+def evaluate_task(doc_encoder, decoder, loader, device, spec: TaskSpec, ndb=None,
+                  max_len: int = 64) -> dict:
     """逐任务可判对错验证。
 
     所有任务都测：
@@ -185,10 +207,17 @@ def evaluate_task(doc_encoder, decoder, loader, device, spec: TaskSpec, max_len:
         mask = batch["attention_mask"].to(device)
         doc_memory = doc_encoder(inp, attention_mask=mask)
         B = inp.shape[0]
+        if ndb is not None:
+            ndb.reset(B, device)      # 验证也是逐样本重建：绝不复用训练记忆
 
         # 首步：只判"第一个切片"——这是位置漂移与误报最直接的观测量
         q0 = decoder.bos_query.expand(B, 1, -1)
         out = decoder.forward_step(q0, doc_memory, doc_mask=mask)
+        if ndb is not None:
+            # 推理口径：读注意力只能来自**指针自己的预测**（没有真值可用）
+            attn = ndb.read_attention(out["start_logits"], mask)
+            out = dict(out, cls_logits=ndb.read(out["cls_logits"],
+                                                out["last_hidden"].squeeze(1), inp, attn))
 
         pred_cls = out["cls_logits"].argmax(-1)          # [B]
         pred_s = out["start_logits"].argmax(-1)          # [B]
@@ -212,7 +241,7 @@ def evaluate_task(doc_encoder, decoder, loader, device, spec: TaskSpec, max_len:
         bg_fired += ((pred_cls > 0) & (is_bg > 0.5)).sum().item()
         bg_tot += (is_bg > 0.5).sum().item()
 
-        preds = _rollout(decoder, doc_memory, mask, B, spec)
+        preds = _rollout(decoder, doc_memory, mask, B, spec, ndb=ndb, input_ids=inp)
         for b in range(B):
             truth = _truth_of(batch, b, spec)
             got = preds[b]
@@ -300,18 +329,34 @@ def evaluate_task(doc_encoder, decoder, loader, device, spec: TaskSpec, max_len:
 
 
 @torch.no_grad()
-def _rollout(decoder, doc_memory, mask, B: int, spec: TaskSpec) -> list[list[tuple[int, int, int]]]:
-    """完整自回归发射一遍，返回每个样本的 [(label, start, end), ...]。仅成对任务用。"""
+def _rollout(decoder, doc_memory, mask, B: int, spec: TaskSpec,
+             ndb=None, input_ids=None) -> list[list[tuple[int, int, int]]]:
+    """完整自回归发射一遍，返回每个样本的 [(label, start, end), ...]。
+
+    接了 `ndb` 时，每步先按**预测的** start 指针查记忆，发射出切片后再把
+    「预测的起始字面 → 预测的 label」写回该样本自己的情节记忆 —— 部署口径：
+    记忆里存的全是模型自己发过的切片，没有任何真值。
+    """
     q_seq = decoder.bos_query.expand(B, 1, -1)
     results: list[list[tuple[int, int, int]]] = [[] for _ in range(B)]
     alive = torch.ones(B, dtype=torch.bool, device=doc_memory.device)
     L = doc_memory.shape[1]
+    if ndb is not None:
+        ndb.reset(B, doc_memory.device)
     for _ in range(spec.max_steps):
         out = decoder.forward_step(q_seq, doc_memory, doc_mask=mask)
+        if ndb is not None:
+            attn = ndb.read_attention(out["start_logits"], mask)
+            out = dict(out, cls_logits=ndb.read(out["cls_logits"],
+                                                out["last_hidden"].squeeze(1), input_ids, attn))
         cls = out["cls_logits"].argmax(-1)
         s = out["start_logits"].argmax(-1)
         e = out["end_logits"].argmax(-1)
         act = out["action_logits"].argmax(-1)
+        if ndb is not None:
+            with ndb.write_enabled():
+                ndb.write(out["last_hidden"].squeeze(1), input_ids, s, cls,
+                          alive.to(cls.dtype))
         for b in range(B):
             if not alive[b]:
                 continue

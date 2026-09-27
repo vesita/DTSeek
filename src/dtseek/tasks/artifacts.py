@@ -72,7 +72,12 @@ def load_base_encoder(path: str | Path, device="cpu"):
 
 def save_card(path: str | Path, decoder, *, task: str, spec, hidden_dim: int,
               decoder_kwargs: dict, base_format: str = BASE_FORMAT,
-              train_args: dict | None = None) -> None:
+              train_args: dict | None = None, extra: dict | None = None) -> None:
+    """存一张任务卡。
+
+    `extra` 是**可选的外挂模块附加信息**（如人物卡的 Mention-NDB 门控权重与配置）。
+    默认空 dict：不传时产物与旧版逐字节等价，旧读端也完全不受影响。
+    """
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     torch.save({
         "format": CARD_FORMAT,
@@ -83,6 +88,7 @@ def save_card(path: str | Path, decoder, *, task: str, spec, hidden_dim: int,
         "decoder_kwargs": decoder_kwargs,
         "base_format": base_format,
         "train_args": train_args or {},
+        "extra": extra or {},
     }, path)
 
 

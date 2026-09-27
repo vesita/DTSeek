@@ -39,6 +39,25 @@ DEFAULT_BASE = "checkpoints/base_encoder.pt"
 DEFAULT_CARDS_DIR = "checkpoints/cards"
 
 
+def load_card_ndb(ck: dict, device):
+    """按产物里的 `extra.ndb` 重建提及检索记忆；没有就返回 None。
+
+    为什么必须在这里重建：`--ndb` 训出来的卡，**门控权重**是模型的一部分（存在
+    `extra.ndb.state_dict`），推理时若只挂 `decoder` 就会静默丢掉那段记忆 ——
+    指标会当场掉回基线，而且不报错。没有 `extra.ndb` 的旧卡走 None，行为与从前逐位一致。
+    """
+    meta = (ck.get("extra") or {}).get("ndb")
+    if not meta:
+        return None
+    from dtseek.decoder.mention_ndb import MentionNDB
+
+    ndb = MentionNDB(**meta["kwargs"]).to(device)
+    ndb.load_state_dict(meta["state_dict"])
+    ndb.eval()
+    return ndb
+
+
+
 class MultiTaskEngine:
     """基座常驻 + 可热插拔的任务卡。"""
 
@@ -62,6 +81,7 @@ class MultiTaskEngine:
         self.base_path = base_path
         self.specs: dict[str, TaskSpec] = {}
         self.decoders: dict[str, object] = {}
+        self.ndbs: dict[str, object] = {}
         self.card_paths: dict[str, str] = {}
 
         if auto_attach:
@@ -88,6 +108,7 @@ class MultiTaskEngine:
         # 推理行为（切段策略/窗口）以注册表里的卡为准；卡没注册时退回产物里的快照
         self.specs[name] = registered.spec if registered is not None else artifact_spec
         self.decoders[name] = decoder
+        self.ndbs[name] = load_card_ndb(ck, self.device)
         self.card_paths[name] = path
         return name
 
@@ -100,6 +121,7 @@ class MultiTaskEngine:
     def detach(self, name: str) -> None:
         self.decoders.pop(name, None)
         self.specs.pop(name, None)
+        self.ndbs.pop(name, None)
         self.card_paths.pop(name, None)
 
     def task_label(self, task: str) -> str:
@@ -122,9 +144,20 @@ class MultiTaskEngine:
         q_seq = decoder.bos_query.clone()
         anchors, seen = [], set()
 
+        # 情节记忆：每段文本一张空表（与训练口径一致 —— 记忆绝不跨样本残留）
+        ndb = self.ndbs.get(task)
+        if ndb is not None:
+            ndb.reset(1, self.device)
+
         for step in range(spec.max_steps):
             out = decoder.forward_step(q_seq, doc_memory, doc_mask=mask)
-            cls_prob = F.softmax(out["cls_logits"][0], dim=-1)
+            cls_logits = out["cls_logits"]
+            if ndb is not None:
+                # 键必须是**指针自己预测的那个位置**（硬 argmax）；软权重会摊到有键的
+                # 旧提及上，把新人物误判成已有 id（见 mention_ndb.read_attention 的注释）
+                attn = ndb.read_attention(out["start_logits"], mask)
+                cls_logits = ndb.read(cls_logits, out["last_hidden"].squeeze(1), inp, attn)
+            cls_prob = F.softmax(cls_logits[0], dim=-1)
             pred_cls = int(cls_prob.argmax().item())
             action = int(F.softmax(out["action_logits"][0], dim=-1).argmax().item())
 
@@ -150,6 +183,14 @@ class MultiTaskEngine:
                 "local_e0": e0,
                 "next_action": "<cont>" if action == 1 else "<eos>",
             })
+
+            if ndb is not None:
+                # 存的是**模型自己发过的**切片（部署口径：没有任何真值可用）
+                with ndb.write_enabled():
+                    ndb.write(out["last_hidden"].squeeze(1), inp,
+                              torch.tensor([s0], device=self.device),
+                              torch.tensor([pred_cls], device=self.device),
+                              torch.ones(1, device=self.device))
 
             if action == 0:
                 break
