@@ -39,22 +39,27 @@ DTSeek/
 │   ├── example_ar.py            # 基础自回归连续切片发射演示
 │   ├── example_multispan.py     # DETR-Slot 多切片检测演示
 │   ├── example_yolo.py          # YOLO 式语句切片分类演示
+│   ├── example_multitask.py     # 【推荐】多任务同屏演示（代词/情绪/归属三类切片）
 │   └── example.py               # 基础代词识别分类演示
 ├── training/                    # 各演进阶段的训练脚本
-│   ├── train_robust_ar.py       # 增强型自回归模型训练（显式反馈 + 因果掩码 + 39万语料）
+│   ├── train_multitask.py       # 【推荐】多任务交替联合训练（共享基座 + 3 张任务卡）
+│   ├── train_robust_ar.py       # 增强型自回归模型训练（显式反馈 + 因果掩码）
 │   ├── train_batched_ar.py      # 基础自回归模型矢量化训练
 │   ├── train_fast_multispan.py  # 快速多切片检测训练
 │   ├── train_yolo.py            # YOLO 复合损失训练
 │   └── train_pronoun.py         # 初级代词分类基准训练
 ├── src/dtseek/                  # 核心源码包
+│   ├── nano_doc_encoder.py      # 【基座】nanoSeek 资产：RMSNorm+RoPE+QK-Norm+SwiGLU+FlashAttn
+│   ├── doc_encoder.py           # 旧版简易编码器（保留作对照）
 │   ├── robust_ar_model.py       # 增强型自回归切片解码器（Causal Mask + feedback_proj）
 │   ├── ar_slice_model.py        # 基础自回归切片解码层
-│   ├── doc_encoder.py           # 纯字符级轻量长文本编码器
 │   ├── segmenter.py             # 长文档自适应分句与全局绝对坐标映射引擎
 │   ├── slot_detector.py         # DETR-Slot 动态切片槽位模型
 │   ├── slot_loss.py             # 匈牙利二分图匹配与集合损失函数
 │   ├── query_projector.py       # 正交 Query 投影层（防止表示退化）
-│   ├── rich_ar_dataset.py       # 真实对话长复合句与多代词样本生成器
+│   ├── rich_ar_dataset.py       # 代词切片数据集（v2：背景句配额 32%）
+│   ├── sentiment_dataset.py     # 情绪切片数据集（4 分类均衡）
+│   ├── ownership_dataset.py     # 归属人切片数据集（背景句配额 30%）
 │   ├── evaluation.py            # 标准多维探针评估套件（Probes + 混淆矩阵）
 │   ├── pipeline.py              # DTSeek 顶层执行调度引擎与任务卡注册
 │   └── model.py                 # DTSeek 核心解耦决策模型
@@ -63,19 +68,34 @@ DTSeek/
 └── pyproject.toml               # uv / pip 依赖管理配置
 ```
 
+> **模型权重不入 git**：`checkpoints/` 已被 `.gitignore` 忽略（权重是大体积二进制，
+> 且可由训练脚本完整复现）。clone 之后需按下方顺序自行训练产出权重。
+
 ---
 
 ## 快速上手与使用
 
-### 1. 安装依赖（uv）
-本项目使用 `uv` 管理依赖：
+### 0. 训练产出权重（首次使用必做）
+
+权重不入库，clone 后先跑一次多任务训练：
 ```bash
 cd /home/vesita/coding/my/DTSeek
 uv sync
+uv run python training/train_multitask.py
+```
+训练结束会产出：
+- `checkpoints/multitask_v2_dtseek.pt` —— 共享基座 + 3 张任务卡的权重
+- `checkpoints/multitask_v2_metrics.json` —— 逐任务可判对错指标
+  （首切片类别准确率 / 区间完全命中率 / 背景句误报率）
+
+### 1. 多任务同屏演示（推荐）
+一次输入，同时给出人称代词、情绪倾向、发言归属三类切片：
+```bash
+uv run python examples/example_multitask.py
 ```
 
 ### 2. 交互式切片分类高亮演示
-执行推荐的增强型自回归切片演示：
+执行增强型自回归切片演示（需先跑 `training/train_robust_ar.py`）：
 ```bash
 uv run python examples/example_robust_ar.py
 ```
