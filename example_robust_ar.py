@@ -1,9 +1,14 @@
-"""Interactive and CLI demo for Robust Autoregressive Slice Emission with Dynamic Text Highlighting.
+"""Interactive and CLI demo for Robust Autoregressive Slice Emission with Long Document Segmentation.
 
-Core Paradigm:
-- Model output: purely discrete anchor indices [start_1, end_1] + category_id + confidence + action.
-  (NO raw string output from model, zero text hallucination).
-- Engine presentation: renders original input with beautiful terminal ANSI color highlights based on anchor bounds!
+Features:
+1. Sentence/Clause Segmentation Engine:
+   Automatically splits arbitrary long paragraphs (thousands of tokens) into natural clauses while
+   tracking exact global 1-based character offsets!
+2. Model Invariance:
+   Processes each segment within its optimal receptive field (<= 64 tokens), completely preventing
+   truncation loss and positional encoding degradation.
+3. Global Highlight Presentation:
+   Recombines all sub-sentence anchors and highlights the full long text accurately!
 """
 import argparse
 import os
@@ -13,6 +18,7 @@ import torch.nn.functional as F
 from nano_char_tokenizer import NanoCharTokenizer
 from dtseek.doc_encoder import SimpleDocEncoder
 from dtseek.robust_ar_model import RobustARSliceDecoder
+from dtseek.segmenter import split_with_global_offsets
 
 CLASSES = [
     {"id": 0, "name": "无代词(背景)", "color": "\033[90m"},      # 灰色
@@ -23,7 +29,7 @@ CLASSES = [
 RESET = "\033[0m"
 
 
-class RobustARSlicePredictor:
+class LongDocARSlicePredictor:
     def __init__(self, ckpt_path: str = "checkpoints/robust_ar_dtseek.pt", device: str = None):
         self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
         self.tokenizer = NanoCharTokenizer()
@@ -52,27 +58,22 @@ class RobustARSlicePredictor:
         self.decoder.load_state_dict(ckpt["decoder"])
         self.decoder.eval()
 
-    def predict_anchors(self, text: str, max_steps: int = 6) -> dict:
-        """Returns purely structural anchor outputs: start/end 1-based indices, categories, confidence, next_action."""
-        text = text.strip()
-        if not text:
-            return {"error": "输入文本不能为空"}
-
-        enc = self.tokenizer.encode(text, max_length=64, padding=True)
+    def _predict_segment(self, segment_text: str, max_steps: int = 5) -> list:
+        """Predicts slices for a single short segment (<= 64 chars)."""
+        enc = self.tokenizer.encode(segment_text, max_length=64, padding=True)
         inp = torch.tensor([enc["input_ids"]], device=self.device)
         mask = torch.tensor([enc["attention_mask"]], dtype=torch.bool, device=self.device)
-        L = len(text)
+        L = len(segment_text)
 
         with torch.no_grad():
             doc_memory = self.doc_encoder(inp, attention_mask=mask)
-            q_seq = self.decoder.bos_query.clone()  # [1, 1, D]
+            q_seq = self.decoder.bos_query.clone()
 
             anchors = []
             seen_spans = set()
 
             for step in range(max_steps):
                 step_out = self.decoder.forward_step(q_seq, doc_memory, doc_mask=mask)
-
                 cls_prob = F.softmax(step_out["cls_logits"][0], dim=-1)
                 pred_cls = int(torch.argmax(cls_prob).item())
 
@@ -80,7 +81,7 @@ class RobustARSlicePredictor:
                 end_idx = int(torch.argmax(step_out["end_logits"][0]).item())
 
                 act_prob = F.softmax(step_out["action_logits"][0], dim=-1)
-                action = int(torch.argmax(act_prob).item())  # 0: <eos>, 1: <cont>
+                action = int(torch.argmax(act_prob).item())
 
                 if pred_cls == 0:
                     break
@@ -88,24 +89,17 @@ class RobustARSlicePredictor:
                 s0 = max(0, min(L - 1, min(start_idx, end_idx)))
                 e0 = max(s0, min(L - 1, max(start_idx, end_idx)))
 
-                span_tuple = (s0, e0)
-                if span_tuple in seen_spans:
+                if (s0, e0) in seen_spans:
                     break
-                seen_spans.add(span_tuple)
-
-                # 1-based closed interval [start_1, end_1]
-                start_1 = s0 + 1
-                end_1 = e0 + 1
+                seen_spans.add((s0, e0))
 
                 anchors.append({
-                    "step": step + 1,
                     "category": CLASSES[pred_cls]["name"],
                     "category_id": pred_cls,
                     "color": CLASSES[pred_cls]["color"],
                     "confidence": round(float(cls_prob[pred_cls].item()), 4),
-                    "span": [start_1, end_1],
-                    "s0": s0,
-                    "e0": e0,
+                    "local_s0": s0,
+                    "local_e0": e0,
                     "next_action": "<cont>" if action == 1 else "<eos>",
                 })
 
@@ -124,19 +118,56 @@ class RobustARSlicePredictor:
                 )
                 q_seq = torch.cat([q_seq, next_q], dim=1)
 
+        return anchors
+
+    def predict_long_text(self, text: str) -> dict:
+        text = text.strip()
+        if not text:
+            return {"error": "输入文本不能为空"}
+
+        # 1. Segment document into natural clauses while preserving exact global offsets
+        segments = split_with_global_offsets(text, max_chunk_len=55)
+
+        global_anchors = []
+        step_counter = 1
+
+        for seg in segments:
+            seg_text = seg["text"]
+            g_start = seg["global_start"]
+
+            seg_anchors = self._predict_segment(seg_text)
+            for a in seg_anchors:
+                # Map to global 0-based and 1-based closed intervals
+                global_s0 = g_start + a["local_s0"]
+                global_e0 = g_start + a["local_e0"]
+                start_1 = global_s0 + 1
+                end_1 = global_e0 + 1
+
+                global_anchors.append({
+                    "step": step_counter,
+                    "category": a["category"],
+                    "category_id": a["category_id"],
+                    "color": a["color"],
+                    "confidence": a["confidence"],
+                    "span": [start_1, end_1],
+                    "s0": global_s0,
+                    "e0": global_e0,
+                    "next_action": a["next_action"],
+                })
+                step_counter += 1
+
         return {
             "text": text,
-            "num_anchors": len(anchors),
-            "anchors": anchors,
+            "num_segments": len(segments),
+            "num_anchors": len(global_anchors),
+            "anchors": global_anchors,
         }
 
 
 def render_highlighted_text(text: str, anchors: list) -> str:
-    """Takes original input text and overlays ANSI color tags based strictly on anchor index spans."""
     if not anchors:
         return text
 
-    # Map each character index to a color tag if within an anchor
     char_styles = [None] * len(text)
     for a in anchors:
         for i in range(a["s0"], a["e0"] + 1):
@@ -151,7 +182,7 @@ def render_highlighted_text(text: str, anchors: list) -> str:
             if current_style is not None:
                 rendered.append(RESET)
             if style is not None:
-                rendered.append(f"\033[4m{style}")  # Bold Color + Underline
+                rendered.append(f"\033[4m{style}")
             current_style = style
         rendered.append(ch)
 
@@ -162,33 +193,31 @@ def render_highlighted_text(text: str, anchors: list) -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="DTSeek 语句切片高亮输出演示")
-    parser.add_argument("text", nargs="?", type=str, help="待检测的中文句子")
+    parser = argparse.ArgumentParser(description="DTSeek 长文本自适应语句切片高亮演示")
+    parser.add_argument("text", nargs="?", type=str, help="待检测的长短中文文本")
     parser.add_argument("--ckpt", default="checkpoints/robust_ar_dtseek.pt", help="模型权重路径")
     args = parser.parse_args()
 
-    predictor = RobustARSlicePredictor(ckpt_path=args.ckpt)
+    predictor = LongDocARSlicePredictor(ckpt_path=args.ckpt)
 
     if args.text:
-        res = predictor.predict_anchors(args.text)
+        res = predictor.predict_long_text(args.text)
         highlighted = render_highlighted_text(res["text"], res["anchors"])
         print("\n" + "=" * 65)
-        print(f"原始输入:       {res['text']}")
-        print(f"切片高亮:       {highlighted}")
-        print(f"触发锚点数:     {res['num_anchors']} 个")
-        if res["num_anchors"] == 0:
-            print("锚点详情:       无 (模型首步直接预测 <eos>，纯背景文本)")
-        else:
-            print("模型吐出锚点 (Pure Position Anchors):")
-            for a in res["anchors"]:
-                act_tag = f"-> 动作: {a['next_action']}"
-                print(f"  Step {a['step']}: {a['color']}[{a['span'][0]}:{a['span'][1]}]{RESET} | {a['category']:10s} | 置信度: {a['confidence']:.3f} | {act_tag}")
+        print(f"输入文本长度:   {len(res['text'])} 字符 (自动拆分为 {res['num_segments']} 个自适应语义分句)")
+        print(f"触发锚点总数:   {res['num_anchors']} 个")
+        print("\n[切片高亮正文 (全文无截断渲染)]:\n")
+        print(highlighted)
+        print("\n" + "-" * 65)
+        print("模型吐出锚点详情 (Global 1-Based Anchors):")
+        for a in res["anchors"]:
+            print(f"  Step {a['step']:2d}: {a['color']}[{a['span'][0]:3d}:{a['span'][1]:3d}]{RESET} | {a['category']:10s} | 置信度: {a['confidence']:.3f} | 原文: '{res['text'][a['s0']:a['e0']+1]}'")
         print("=" * 65 + "\n")
         return
 
     print("\n" + "=" * 65)
-    print("  DTSeek 语句切片高亮显示演示 (纯锚点定位 + 终端着色)")
-    print("  模型仅吐出数字锚点与类别，由界面高亮原文中对应的字符。")
+    print("  DTSeek 长文本自适应分句切片高亮演示")
+    print("  支持任意千字长篇大论，自动标点切分子句 + 全局精准坐标映射。")
     print("  输入 'exit' 或 'quit' 退出。")
     print("=" * 65 + "\n")
 
@@ -199,14 +228,14 @@ def main():
                 continue
             if line.lower() in ("exit", "quit"):
                 break
-            res = predictor.predict_anchors(line)
+            res = predictor.predict_long_text(line)
             highlighted = render_highlighted_text(res["text"], res["anchors"])
             print(f" -> 高亮解析: {highlighted}")
             if res["num_anchors"] == 0:
-                print("    (纯背景文本，首步直接 <eos>)")
+                print("    (纯背景文本)")
             else:
                 for a in res["anchors"]:
-                    print(f"    • Step {a['step']}: {a['color']}[{a['span'][0]}:{a['span'][1]}]{RESET} ({a['category']}, 置信度: {a['confidence']}) {a['next_action']}")
+                    print(f"    • Step {a['step']}: {a['color']}[{a['span'][0]}:{a['span'][1]}]{RESET} ({a['category']}, 置信度: {a['confidence']}) '{res['text'][a['s0']:a['e0']+1]}'")
             print()
         except (KeyboardInterrupt, EOFError):
             print("\n退出。")
