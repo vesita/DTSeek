@@ -159,6 +159,9 @@ def evaluate_task(doc_encoder, decoder, loader, device, spec: TaskSpec, max_len:
       - `pair_order` : 每对内部是否严格左先右后（顺序错了对子就没用）
       - `pair_odd`   : 预测出的切片数是奇数的比例（隐式配对的天敌）
     """
+    # 记住调用前的模式并原样还原：解码器 dropout=0.1，
+    # 若在函数末尾硬写 .train()，调用方在它之后继续评估就会带 dropout，指标被污染。
+    was_training = (doc_encoder.training, decoder.training)
     doc_encoder.eval()
     decoder.eval()
 
@@ -262,8 +265,10 @@ def evaluate_task(doc_encoder, decoder, loader, device, spec: TaskSpec, max_len:
                 if _pair_order_ok(got):
                     order_ok += 1
 
-    doc_encoder.train()
-    decoder.train()
+    if was_training[0]:
+        doc_encoder.train()
+    if was_training[1]:
+        decoder.train()
     report = {
         "cls_acc": cls_ok / max(1, cls_tot),
         "span_hit": span_ok / max(1, span_tot),
