@@ -1,293 +1,171 @@
-"""多任务交替联合训练引擎 v2（nanoSeek 高效基座 + 可判对错的逐任务验证）
+"""多任务交替联合训练引擎 v3 —— **任务卡注册表驱动**。
+
+训练脚本不再认识任何具体任务：任务从 `dtseek.tasks.plugin` 的注册表里来，
+样本量、类别数、发射步数、损失权重全部由各任务卡的 `TaskSpec` 决定。
+
+    加一个任务 = 在 src/dtseek/tasks/ 下加一个模块（本文件一行都不用改）
 
 训练范式：
 - 共享同一个 NanoDocEncoder 基座（RMSNorm + RoPE + QK-Norm + SwiGLU + FlashAttn），
-  放开梯度，随三任务交替反向传播持续进化；
-- 三个任务各持独立轻量 Decoder 任务卡（Task Cartridge）：
-    1. pronoun   : 人称代词切片 (无代词/第一/第二/第三人称)
-    2. sentiment : 对话情绪切片 (中性/积极/愤怒/悲伤)
-    3. ownership : 发言归属人切片 (无归属/用户/助手/第三方)
-- 每个训练步交替消费三任务的 batch，基座同时吸收三路梯度。
+  放开梯度，随各任务交替反向传播持续进化；
+- 每个任务各持一张独立的轻量 Decoder 任务卡，彼此不共享参数。
 
 为什么必须逐任务验证（而不是只看 loss）：
-上一版情绪任务只用 loss 观察，结果把"喜欢"圈成"颜"、对中性疑问句误报，
-loss 一路下降却完全没暴露——因为 loss 只衡量"平均拟合"，不衡量"位置是否落在词上"
-和"中性句是否被误触发"。这里为每个任务测三个可判对错的指标：
-  1. cls_acc      : 首切片类别正确率（分类对不对）
-  2. span_hit     : 首切片起止区间与真值完全一致的比例（指针落点准不准）
-  3. bg_fp        : 背景句被误报出切片的比例（中性句会不会乱开火，越低越好）
+只用 loss 观察时，模型会把"喜欢"圈成"颜"、对中性疑问句误报，loss 一路下降却
+完全没暴露 —— 因为 loss 只衡量"平均拟合"，不衡量"位置是否落在词上"。
+所以每个任务都测可判对错的指标，见 `dtseek.tasks.runtime.evaluate_task`。
 """
+import argparse
 import json
 import random
+import sys
+from pathlib import Path
 
 import torch
-import torch.nn.functional as F
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 
 from nano_char_tokenizer import NanoCharTokenizer
-from dtseek.nano_doc_encoder import NanoDocEncoder
-from dtseek.robust_ar_model import RobustARSliceDecoder
-from dtseek.rich_ar_dataset import build_rich_ar_dataset
-from dtseek.sentiment_dataset import build_sentiment_dataset
-from dtseek.ownership_dataset import build_ownership_dataset
+from dtseek.encoder.nano_doc_encoder import NanoDocEncoder
+from dtseek.decoder.robust_ar_model import RobustARSliceDecoder
+from dtseek.tasks.plugin import all_tasks, resolve_tasks
+from dtseek.tasks.runtime import GenericTaskDataset, evaluate_task, task_loss
 
+#: 历史默认样本量：情绪词典 199 词，样本量必须与词典规模成比例，否则长尾欠训
+DEFAULT_TASK_SAMPLES = {"pronoun": 6000, "sentiment": 32000, "ownership": 8000}
 
-TASK_SPECS = {
-    "pronoun": ["无代词", "第一人称", "第二人称", "第三人称"],
-    "sentiment": ["中性", "积极", "愤怒", "悲伤"],
-    "ownership": ["无归属", "用户", "助手", "第三方"],
+ENCODER_KWARGS = {
+    "num_layers": 3,
+    "num_heads": 4,
+    "max_len": 128,
+    "rope_theta": 10000.0,
+    "use_qk_norm": True,
+    "swiglu_scale": 8 / 3,
 }
-
-
-class GenericTaskDataset(Dataset):
-    """把 {text, spans:[{label,start,end}]} 编码成固定 max_steps 的自回归监督张量。"""
-
-    def __init__(self, data, tokenizer, max_len=64, max_steps=4):
-        self.data = data
-        self.tokenizer = tokenizer
-        self.max_len = max_len
-        self.max_steps = max_steps
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        item = self.data[idx]
-        enc = self.tokenizer.encode(item["text"], max_length=self.max_len, padding=True)
-        spans = sorted(item["spans"], key=lambda x: x["start"])[:self.max_steps]
-        L = len(item["text"])
-
-        labels = [0] * self.max_steps
-        starts = [0] * self.max_steps
-        ends = [0] * self.max_steps
-        norm_starts = [0.0] * self.max_steps
-        norm_ends = [0.0] * self.max_steps
-        actions = [0] * self.max_steps
-        step_mask = [0.0] * self.max_steps
-
-        if len(spans) == 0:
-            # 背景句：首步直接预测类别 0 + <eos>，之后所有步不计损失
-            step_mask[0] = 1.0
-        else:
-            for i, s in enumerate(spans):
-                step_mask[i] = 1.0
-                labels[i] = s["label"]
-                s_idx = min(self.max_len - 1, s["start"])
-                e_idx = min(self.max_len - 1, max(s["start"], s["end"] - 1))
-                starts[i] = s_idx
-                ends[i] = e_idx
-                norm_starts[i] = s_idx / max(1, L)
-                norm_ends[i] = e_idx / max(1, L)
-                actions[i] = 0 if (i == len(spans) - 1) else 1  # 0=<eos>, 1=<cont>
-
-        return {
-            "input_ids": torch.tensor(enc["input_ids"], dtype=torch.long),
-            "attention_mask": torch.tensor(enc["attention_mask"], dtype=torch.bool),
-            "labels": torch.tensor(labels, dtype=torch.long),
-            "starts": torch.tensor(starts, dtype=torch.long),
-            "ends": torch.tensor(ends, dtype=torch.long),
-            "norm_starts": torch.tensor(norm_starts, dtype=torch.float),
-            "norm_ends": torch.tensor(norm_ends, dtype=torch.float),
-            "actions": torch.tensor(actions, dtype=torch.long),
-            "step_mask": torch.tensor(step_mask, dtype=torch.float),
-            "is_bg": torch.tensor(1.0 if len(spans) == 0 else 0.0, dtype=torch.float),
-        }
-
-
-def task_loss(decoder, doc_memory, mask, batch, max_steps, device):
-    """单任务的自回归多步损失（教师强制）。
-
-    分类损失对背景类（id=0）加权：背景句在自回归范式下只在第 0 步贡献 **一个**
-    监督信号，而有切片的句子贡献 N 个信号 —— 天然被双重稀释。轻微上调背景类权重
-    可抑制"永远开火"的退化解（v1 的中性句 100% 误报）。
-    """
-    t_labels = batch["labels"].to(device)
-    t_starts = batch["starts"].to(device)
-    t_ends = batch["ends"].to(device)
-    t_nstarts = batch["norm_starts"].to(device)
-    t_nends = batch["norm_ends"].to(device)
-    t_actions = batch["actions"].to(device)
-    step_mask = batch["step_mask"].to(device)
-    B = doc_memory.shape[0]
-
-    # 背景类权重 1.3，其余 1.0
-    cls_w = torch.tensor([1.3, 1.0, 1.0, 1.0], device=device)
-    # <eos>(0) 与 <cont>(1) 均衡：稍偏 <cont>，避免过早停机
-    act_w = torch.tensor([0.8, 1.2], device=device)
-
-    q_seq = decoder.bos_query.expand(B, 1, -1)
-    loss = torch.tensor(0.0, device=device)
-
-    for s in range(max_steps):
-        step_out = decoder.forward_step(q_seq, doc_memory, doc_mask=mask)
-        m = step_mask[:, s]
-        if m.sum() > 0:
-            l_cls = (F.cross_entropy(step_out["cls_logits"], t_labels[:, s],
-                                     weight=cls_w, reduction="none") * m).sum() / m.sum()
-            l_s = (F.cross_entropy(step_out["start_logits"], t_starts[:, s], reduction="none") * m).sum() / m.sum()
-            l_e = (F.cross_entropy(step_out["end_logits"], t_ends[:, s], reduction="none") * m).sum() / m.sum()
-            l_act = (F.cross_entropy(step_out["action_logits"], t_actions[:, s],
-                                     weight=act_w, reduction="none") * m).sum() / m.sum()
-            loss = loss + (l_cls + 1.5 * l_s + 1.5 * l_e + l_act)
-
-        # 教师强制：用真值切片状态驱动下一步（训练稳定、并行度高）
-        next_q = decoder.get_step_input(
-            prev_hidden=step_out["last_hidden"],
-            prev_cls=t_labels[:, s:s + 1],
-            prev_start=t_nstarts[:, s:s + 1, None],
-            prev_end=t_nends[:, s:s + 1, None],
-        )
-        q_seq = torch.cat([q_seq, next_q], dim=1)
-
-    return loss
-
-
-@torch.no_grad()
-def evaluate_task(doc_encoder, decoder, loader, device, max_steps, max_len=64):
-    """逐任务三指标验证：cls_acc / span_hit / bg_fp。"""
-    doc_encoder.eval()
-    decoder.eval()
-
-    cls_ok = cls_tot = 0
-    span_ok = span_tot = 0
-    bg_fired = bg_tot = 0
-
-    for batch in loader:
-        inp = batch["input_ids"].to(device)
-        mask = batch["attention_mask"].to(device)
-        doc_memory = doc_encoder(inp, attention_mask=mask)
-        B = inp.shape[0]
-
-        # 首步：只判"第一个切片"——这是位置漂移与误报最直接的观测量
-        q0 = decoder.bos_query.expand(B, 1, -1)
-        out = decoder.forward_step(q0, doc_memory, doc_mask=mask)
-
-        pred_cls = out["cls_logits"].argmax(-1)          # [B]
-        pred_s = out["start_logits"].argmax(-1)          # [B]
-        pred_e = out["end_logits"].argmax(-1)            # [B]
-
-        t_labels = batch["labels"][:, 0].to(device)
-        t_s = batch["starts"][:, 0].to(device)
-        t_e = batch["ends"][:, 0].to(device)
-        is_bg = batch["is_bg"].to(device)
-
-        # 1. 分类正确率（只看有切片的样本，背景句单列进 bg_fp）
-        real = (t_labels > 0)
-        cls_ok += ((pred_cls == t_labels) & real).sum().item()
-        cls_tot += real.sum().item()
-
-        # 2. 区间完全命中率（起止都对才算）
-        span_ok += (((pred_s == t_s) & (pred_e == t_e)) & real).sum().item()
-        span_tot += real.sum().item()
-
-        # 3. 背景句误开火率（预测类别非 0 即为误报）
-        bg_fired += ((pred_cls > 0) & (is_bg > 0.5)).sum().item()
-        bg_tot += (is_bg > 0.5).sum().item()
-
-    doc_encoder.train()
-    decoder.train()
-    return {
-        "cls_acc": cls_ok / max(1, cls_tot),
-        "span_hit": span_ok / max(1, span_tot),
-        "bg_fp": bg_fired / max(1, bg_tot),
-        "n_cls": cls_tot,
-        "n_bg": bg_tot,
-    }
+DECODER_KWARGS = {"num_heads": 4, "num_layers": 2}
+HIDDEN_DIM = 128
 
 
 def train_multitask(num_epochs: int = 16, batch_size: int = 64,
                     lr_base: float = 3e-4, lr_head: float = 1e-3,
                     samples_per_task: int = 6000,
-                    task_samples: dict = None):
+                    task_samples: dict | None = None,
+                    tasks: list[str] | None = None,
+                    steps_per_epoch: int | None = None,
+                    freeze_base: bool = False,
+                    init_from: str | None = None,
+                    seed: int = 42,
+                    ckpt_path: str = "checkpoints/multitask_v2_dtseek.pt",
+                    metrics_path: str = "checkpoints/multitask_v2_metrics.json") -> dict:
     """多任务交替联合训练。
 
     Args:
-        task_samples: 逐任务样本量覆盖，例如 {"sentiment": 24000}。
-            情绪任务词典有 186 词、每类约 62 词，若每类只有 1500 条
-            （= 每词仅 8 个样本）模型根本学不全，实测表现为个别词类别判错。
-            样本量应与词典规模成比例。
+        task_samples: 逐任务样本量覆盖，例如 {"sentiment": 24000}。未列出的任务用
+            `DEFAULT_TASK_SAMPLES`，仍未有则用 `samples_per_task`。
+        tasks: 只训这几张任务卡（名字取自注册表）；None = 全部已注册任务。
+        steps_per_epoch: 每个 epoch 的步数。None = 取最短的那个任务的批数。
+            注意默认值会被**最小的**任务卡拖住：加一张小数据集的任务卡，所有任务
+            都跟着少训。要训够就显式给一个值（迭代器耗尽会自动重开）。
+        freeze_base: 冻结共享基座，只训各任务头。基座一旦冻结，各任务头**彼此完全独立**
+            （唯一的耦合通道就是基座），互相干扰随之消失；同时基座转 eval 关掉 dropout。
+        init_from: 从某个 ckpt 热启动：加载 doc_encoder 与同名任务头。冻结基座时几乎总要
+            配它 —— 从随机基座冻结等于让任务头去读噪声。
+        seed: 全局随机种子。加了它训练才可复现 —— 否则重构前后无法比对。
     """
-    if task_samples is None:
-        task_samples = {"pronoun": samples_per_task,
-                        "sentiment": samples_per_task,
-                        "ownership": samples_per_task}
-    else:
-        for k in ("pronoun", "sentiment", "ownership"):
-            task_samples.setdefault(k, samples_per_task)
+    cards = resolve_tasks(tasks)
+    if not cards:
+        raise ValueError("没有任何任务卡可训；检查 dtseek/tasks/ 是否有模块注册")
 
+    resolved = {}
+    for name in cards:
+        if task_samples and name in task_samples:
+            resolved[name] = task_samples[name]
+        else:
+            resolved[name] = DEFAULT_TASK_SAMPLES.get(name, samples_per_task)
+
+    torch.manual_seed(seed)
+    random.seed(seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"多任务联合调优引擎 v2 | 设备: {device}")
+    print(f"多任务联合调优引擎 v3 | 设备: {device} | seed: {seed}")
+    print(f"  任务卡：{'、'.join(f'{n}({cards[n].spec.label})' for n in cards)}")
 
     tokenizer = NanoCharTokenizer()
 
-    # 1. 三任务数据集
-    print("[1/4] 构建三任务数据集 ...")
-    raw = {
-        "pronoun": build_rich_ar_dataset(target_samples=task_samples["pronoun"]),
-        "sentiment": build_sentiment_dataset(target_samples=task_samples["sentiment"]),
-        "ownership": build_ownership_dataset(target_samples=task_samples["ownership"]),
-    }
+    # 1. 逐任务数据集（全部来自各任务卡自己的 build_dataset）
+    print("[1/4] 构建任务数据集 ...")
+    raw = {name: card.build_dataset(resolved[name]) for name, card in cards.items()}
 
-    max_steps = 4
     _eval_sets = {}
     for name, data in raw.items():
-        random.Random(42).shuffle(data)
+        random.Random(seed).shuffle(data)
         n_val = max(200, len(data) // 10)
         _eval_sets[name] = data[:n_val]
         data[:] = data[n_val:]
 
     loaders = {
-        name: DataLoader(GenericTaskDataset(data, tokenizer, max_steps=max_steps),
+        name: DataLoader(GenericTaskDataset(data, tokenizer, cards[name].spec),
                          batch_size=batch_size, shuffle=True, drop_last=True)
         for name, data in raw.items()
     }
     val_loaders = {
-        name: DataLoader(GenericTaskDataset(_eval_sets[name], tokenizer, max_steps=max_steps),
+        name: DataLoader(GenericTaskDataset(_eval_sets[name], tokenizer, cards[name].spec),
                          batch_size=batch_size, shuffle=False)
         for name in raw
     }
 
     # 2. 共享高效基座
     print("[2/4] 构建 NanoDocEncoder 高效基座 ...")
-    hidden_dim = 128
     doc_encoder = NanoDocEncoder(
         vocab_size=tokenizer.vocab_size,
-        hidden_dim=hidden_dim,
-        num_layers=3,
-        num_heads=4,
-        max_len=128,
+        hidden_dim=HIDDEN_DIM,
         dropout=0.1,
-        rope_theta=10000.0,
-        use_qk_norm=True,
-        swiglu_scale=8 / 3,
+        **ENCODER_KWARGS,
     ).to(device)
 
-    # 3. 三张独立任务卡
+    # 3. 逐任务独立任务卡（类别数由 spec 决定，不再写死 4）
     decoders = {
-        name: RobustARSliceDecoder(hidden_dim=hidden_dim, num_classes=4,
-                                   num_heads=4, num_layers=2).to(device)
-        for name in raw
+        name: RobustARSliceDecoder(hidden_dim=HIDDEN_DIM,
+                                   num_classes=cards[name].spec.num_classes,
+                                   **DECODER_KWARGS).to(device)
+        for name in cards
     }
 
+    if init_from:
+        ck = torch.load(init_from, map_location="cpu", weights_only=False)
+        missing, unexpected = doc_encoder.load_state_dict(ck["doc_encoder"], strict=False)
+        resumed = []
+        for name, dec in decoders.items():
+            if name in ck.get("decoders", {}):
+                dec.load_state_dict(ck["decoders"][name])
+                resumed.append(name)
+        print(f"  热启动自 {init_from}：基座已载入（missing={len(missing)}, unexpected={len(unexpected)}）"
+              f"，续训任务头 {resumed}")
+
     head_params = [p for d in decoders.values() for p in d.parameters()]
-    optimizer = torch.optim.AdamW(
-        [
-            {"params": doc_encoder.parameters(), "lr": lr_base},
-            {"params": head_params, "lr": lr_head},
-        ],
-        weight_decay=1e-4,
-    )
+    if freeze_base:
+        for p in doc_encoder.parameters():
+            p.requires_grad_(False)
+        doc_encoder.eval()          # 冻结后关掉 dropout，前向变成确定性函数
+        print(f"  ❄️ 基座已冻结（{sum(p.numel() for p in doc_encoder.parameters()):,} 参数），"
+              f"只训 {sum(p.numel() for p in head_params):,} 个头参数")
+        groups = [{"params": head_params, "lr": lr_head}]
+    else:
+        groups = [{"params": doc_encoder.parameters(), "lr": lr_base},
+                  {"params": head_params, "lr": lr_head}]
+    optimizer = torch.optim.AdamW(groups, weight_decay=1e-4)
     # 余弦退火：基座与任务头同步衰减
-    total_steps = num_epochs * min(len(l) for l in loaders.values())
+    total_steps = num_epochs * min(len(x) for x in loaders.values())
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(1, total_steps))
 
     # 4. 交替训练
     print("[3/4] 开始多任务交替联合训练 ...")
-    iters = {name: iter(l) for name, l in loaders.items()}
-    steps_per_epoch = min(len(l) for l in loaders.values())
+    iters = {name: iter(x) for name, x in loaders.items()}
+    if steps_per_epoch is None:
+        steps_per_epoch = min(len(x) for x in loaders.values())
+    print(f"  每 epoch {steps_per_epoch} 步 × {num_epochs} epoch")
 
     for epoch in range(1, num_epochs + 1):
-        doc_encoder.train()
+        if not freeze_base:
+            doc_encoder.train()
         for d in decoders.values():
             d.train()
 
@@ -305,14 +183,18 @@ def train_multitask(num_epochs: int = 16, batch_size: int = 64,
 
                 inp = batch["input_ids"].to(device)
                 mask = batch["attention_mask"].to(device)
-                doc_memory = doc_encoder(inp, attention_mask=mask)  # 基座共享梯度
-                l = task_loss(decoders[name], doc_memory, mask, batch, max_steps, device)
+                if freeze_base:
+                    with torch.no_grad():
+                        doc_memory = doc_encoder(inp, attention_mask=mask)
+                else:
+                    doc_memory = doc_encoder(inp, attention_mask=mask)  # 基座共享梯度
+                l = task_loss(decoders[name], doc_memory, mask, batch, cards[name].spec, device)
                 batch_loss = batch_loss + l
                 running[name] += l.item()
 
             batch_loss.backward()
             torch.nn.utils.clip_grad_norm_(
-                list(doc_encoder.parameters()) + head_params, 1.0)
+                head_params if freeze_base else list(doc_encoder.parameters()) + head_params, 1.0)
             optimizer.step()
             scheduler.step()
 
@@ -324,33 +206,86 @@ def train_multitask(num_epochs: int = 16, batch_size: int = 64,
     report = {}
     for name in raw:
         metrics = evaluate_task(doc_encoder, decoders[name], val_loaders[name],
-                                device, max_steps)
+                                device, cards[name].spec)
+        if freeze_base:
+            doc_encoder.eval()          # evaluate_task 末尾会 train()，冻结时不该恢复
         report[name] = metrics
+        extra = ""
+        if "pair_exact" in metrics:
+            extra = (f"  对完整命中率={metrics['pair_exact']*100:5.1f}%"
+                     f"  配对顺序={metrics['pair_order']*100:5.1f}%"
+                     f"  奇数切片={metrics['pair_odd']*100:5.1f}%")
         print(f"  [{name:9s}] 首切片类别准确率={metrics['cls_acc']*100:5.1f}%  "
               f"区间完全命中率={metrics['span_hit']*100:5.1f}%  "
-              f"背景句误报率={metrics['bg_fp']*100:5.1f}%  "
-              f"(n_cls={metrics['n_cls']}, n_bg={metrics['n_bg']})")
+              f"背景句误报率={metrics['bg_fp']*100:5.1f}%"
+              f"{extra}  (n_cls={metrics['n_cls']}, n_bg={metrics['n_bg']})")
 
-    ckpt_path = "checkpoints/multitask_v2_dtseek.pt"
+    Path(ckpt_path).parent.mkdir(parents=True, exist_ok=True)
     torch.save({
         "doc_encoder": doc_encoder.state_dict(),
         "decoders": {k: v.state_dict() for k, v in decoders.items()},
-        "hidden_dim": hidden_dim,
+        "hidden_dim": HIDDEN_DIM,
         "encoder": "NanoDocEncoder",
-        "tasks": TASK_SPECS,
+        "encoder_kwargs": ENCODER_KWARGS,
+        "decoder_kwargs": DECODER_KWARGS,
+        "task_order": list(cards),
+        "task_specs": {name: card.spec.to_snapshot() for name, card in cards.items()},
+        "train_args": {"num_epochs": num_epochs, "batch_size": batch_size, "seed": seed,
+                       "lr_base": lr_base, "lr_head": lr_head, "task_samples": resolved,
+                       "freeze_base": freeze_base, "init_from": init_from},
     }, ckpt_path)
 
-    with open("checkpoints/multitask_v2_metrics.json", "w", encoding="utf-8") as f:
+    with open(metrics_path, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
 
     print(f"\n多任务联合模型已保存至 {ckpt_path} ✅")
-    print(f"验证指标已落盘 checkpoints/multitask_v2_metrics.json")
+    print(f"验证指标已落盘 {metrics_path}")
+    return report
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="DTSeek 多任务交替联合训练")
+    parser.add_argument("--tasks", nargs="*", default=None,
+                        help=f"只训这几张任务卡；留空 = 全部。可选：{sorted(all_tasks())}")
+    parser.add_argument("--epochs", type=int, default=16)
+    parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--steps-per-epoch", type=int, default=None,
+                        help="每 epoch 步数；留空 = 取最短任务的批数（加小任务会拖低总步数）")
+    parser.add_argument("--samples-per-task", type=int, default=6000)
+    parser.add_argument("--task-samples", action="append", default=[], metavar="NAME=N",
+                        help="逐任务样本量覆盖，可重复。例：--task-samples sentiment=32000")
+    parser.add_argument("--freeze-base", action="store_true",
+                        help="冻结共享基座只训任务头；配合 --init-from 使用")
+    parser.add_argument("--init-from", default=None, help="从该 ckpt 热启动基座与同名任务头")
+    parser.add_argument("--lr-head", type=float, default=None, help="任务头学习率（默认 1e-3）")
+    parser.add_argument("--ckpt", default="checkpoints/multitask_v2_dtseek.pt")
+    parser.add_argument("--metrics", default="checkpoints/multitask_v2_metrics.json")
+    args = parser.parse_args(argv)
+
+    overrides = {}
+    for item in args.task_samples:
+        name, _, value = item.partition("=")
+        if not value.isdigit():
+            parser.error(f"--task-samples 需要 NAME=N 形式，收到 {item!r}")
+        overrides[name] = int(value)
+
+    train_multitask(
+        num_epochs=args.epochs,
+        batch_size=args.batch_size,
+        seed=args.seed,
+        steps_per_epoch=args.steps_per_epoch,
+        freeze_base=args.freeze_base,
+        init_from=args.init_from,
+        **({"lr_head": args.lr_head} if args.lr_head else {}),
+        samples_per_task=args.samples_per_task,
+        task_samples=overrides or None,
+        tasks=args.tasks,
+        ckpt_path=args.ckpt,
+        metrics_path=args.metrics,
+    )
+    return 0
 
 
 if __name__ == "__main__":
-    # 情绪任务样本量按词典规模放大：199 词 ⇒ 每类 8000 条，配合数据集内部的
-    # "每词下限 60 / 上限 120" 机制，保证词典里每个词都有足够且均衡的监督。
-    train_multitask(
-        num_epochs=16,
-        task_samples={"pronoun": 6000, "sentiment": 32000, "ownership": 8000},
-    )
+    sys.exit(main())

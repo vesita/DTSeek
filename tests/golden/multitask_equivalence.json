@@ -1,0 +1,41 @@
+{
+  "note": "任务卡插件化重构的等价性基线：不得改动下面任何一项",
+  "hidden_dim": 64,
+  "max_steps": 4,
+  "task_specs": {
+    "pronoun": [
+      "无代词",
+      "第一人称",
+      "第二人称",
+      "第三人称"
+    ],
+    "sentiment": [
+      "中性",
+      "积极",
+      "愤怒",
+      "悲伤"
+    ],
+    "ownership": [
+      "无归属",
+      "用户",
+      "助手",
+      "第三方"
+    ]
+  },
+  "encoder_weight_hash": "f61fa045b3c6bdd48a6de406a87787bc04c906b3529e6c0cdd6ec5dc41d352c5",
+  "dataset_hash": {
+    "pronoun": "0d6290108f9b65fceb6596d3c08aa94c9a60579fedf9757b626fb4e3c53b34dc",
+    "sentiment": "4438f45966260654c3bf3641e7eed4c7c80bf8930c8ac84038034b5f9c0d0031",
+    "ownership": "ad2c4d4378af3b03e83f29743c61f969c3596911f7403062f8696637c96df14b"
+  },
+  "decoder_weight_hash": {
+    "ownership": "1f252ed43b1547013e8f7e52139e0206af5e62c9b35bf4959202dfdbbb9e3635",
+    "pronoun": "57d7a40ba8e5593b86c462e5cd6cbcaecd46b34c490e18471741fb860e26c3e7",
+    "sentiment": "54a5285bb17eb5ec44caf401523a055e686d2f87118390578e672eb60ab69a4e"
+  },
+  "step_loss": {
+    "ownership": 11.996028900146484,
+    "pronoun": 24.538740158081055,
+    "sentiment": 9.269195556640625
+  }
+}

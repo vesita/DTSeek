@@ -1,12 +1,17 @@
 {
   "architecture.mmd": {
     "refs": {
-      "src/dtseek/model.py#DTSeekModel": "9115:gdd8hm",
-      "src/dtseek/pipeline.py#DTSeekEngine": "5987:19qps3k",
-      "src/dtseek/pipeline.py#TaskCartridge": "5987:19qps3k",
-      "src/dtseek/model.py#CategoryQueryProjector": "9115:gdd8hm",
-      "src/dtseek/model.py#DETRDecoderLayer": "9115:gdd8hm"
+      "src/dtseek/encoder/segmenter.py#split_with_global_offsets": "1619:xbd9on",
+      "src/dtseek/encoder/nano_doc_encoder.py#NanoDocEncoder": "9736:bcsjhl",
+      "src/dtseek/tasks/plugin.py#TaskSpec": "10220:wveaqk",
+      "src/dtseek/decoder/robust_ar_model.py#RobustARSliceDecoder": "3993:jstud5",
+      "examples/example_multitask.py": "2636:3ibq36",
+      "src/dtseek/tasks/runtime.py#render_highlight": "11331:zzm5iy",
+      "training/train_multitask.py#train_multitask": "9508:18p5ojw",
+      "scripts/eval_probe.py": "3660:1nfsbyc",
+      "src/dtseek/tasks/probe.py#run_probe": "5486:lvpd4e",
+      "src/dtseek/tasks/builtin/sentiment/dataset.py#_validate_neutral_purity": "13869:azo2v"
     },
-    "at": 1790479658798
+    "at": 1790498740732
   }
 }

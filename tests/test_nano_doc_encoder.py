@@ -9,7 +9,7 @@
 """
 import torch
 
-from dtseek.nano_doc_encoder import NanoDocEncoder
+from dtseek.encoder.nano_doc_encoder import NanoDocEncoder
 
 
 def _make(vocab=8192, d=64, layers=2, heads=4, max_len=128):
