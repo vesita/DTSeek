@@ -197,9 +197,26 @@ def evaluate_task(doc_encoder, decoder, loader, device, max_steps, max_len=64):
     }
 
 
-def train_multitask(num_epochs: int = 8, batch_size: int = 64,
+def train_multitask(num_epochs: int = 16, batch_size: int = 64,
                     lr_base: float = 3e-4, lr_head: float = 1e-3,
-                    samples_per_task: int = 6000):
+                    samples_per_task: int = 6000,
+                    task_samples: dict = None):
+    """多任务交替联合训练。
+
+    Args:
+        task_samples: 逐任务样本量覆盖，例如 {"sentiment": 24000}。
+            情绪任务词典有 186 词、每类约 62 词，若每类只有 1500 条
+            （= 每词仅 8 个样本）模型根本学不全，实测表现为个别词类别判错。
+            样本量应与词典规模成比例。
+    """
+    if task_samples is None:
+        task_samples = {"pronoun": samples_per_task,
+                        "sentiment": samples_per_task,
+                        "ownership": samples_per_task}
+    else:
+        for k in ("pronoun", "sentiment", "ownership"):
+            task_samples.setdefault(k, samples_per_task)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"多任务联合调优引擎 v2 | 设备: {device}")
 
@@ -208,9 +225,9 @@ def train_multitask(num_epochs: int = 8, batch_size: int = 64,
     # 1. 三任务数据集
     print("[1/4] 构建三任务数据集 ...")
     raw = {
-        "pronoun": build_rich_ar_dataset(target_samples=samples_per_task),
-        "sentiment": build_sentiment_dataset(target_samples=samples_per_task),
-        "ownership": build_ownership_dataset(target_samples=samples_per_task),
+        "pronoun": build_rich_ar_dataset(target_samples=task_samples["pronoun"]),
+        "sentiment": build_sentiment_dataset(target_samples=task_samples["sentiment"]),
+        "ownership": build_ownership_dataset(target_samples=task_samples["ownership"]),
     }
 
     max_steps = 4
@@ -333,4 +350,9 @@ def train_multitask(num_epochs: int = 8, batch_size: int = 64,
 
 
 if __name__ == "__main__":
-    train_multitask()
+    # 情绪任务样本量按词典规模放大：186 词 ⇒ 每类需 ~6000 条（≈每词 100 个样本），
+    # 否则个别词（如"糟心""破防了"）类别学不准。
+    train_multitask(
+        num_epochs=16,
+        task_samples={"pronoun": 6000, "sentiment": 24000, "ownership": 8000},
+    )
