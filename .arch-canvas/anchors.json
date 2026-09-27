@@ -1,0 +1,12 @@
+{
+  "architecture.mmd": {
+    "refs": {
+      "src/dtseek/model.py#DTSeekModel": "9115:gdd8hm",
+      "src/dtseek/pipeline.py#DTSeekEngine": "5987:19qps3k",
+      "src/dtseek/pipeline.py#TaskCartridge": "5987:19qps3k",
+      "src/dtseek/model.py#CategoryQueryProjector": "9115:gdd8hm",
+      "src/dtseek/model.py#DETRDecoderLayer": "9115:gdd8hm"
+    },
+    "at": 1790479658798
+  }
+}

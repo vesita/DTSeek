@@ -1,0 +1,27 @@
+[project]
+name = "dtseek"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "vesita", email = "vesita164872@outlook.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "nano-char-tokenizer",
+    "numpy>=2.5.3",
+    "pytest>=9.1.1",
+    "ruff>=0.16.9",
+    "torch>=2.14.0",
+    "transformers>=5.17.0",
+]
+
+[project.scripts]
+dtseek = "dtseek:main"
+
+[build-system]
+requires = ["uv_build>=0.12.1,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+nano-char-tokenizer = { path = "../nano-char-tokenizer", editable = true }

@@ -1,0 +1,72 @@
+%% arch-canvas —— 由「架构画布」面板与 AI 共同维护（`%%!` 开头的是格式说明，不是图的内容）
+%%! @summary <一句话> 这张图讲的是什么 —— 会随每一步注入给 AI
+%%! @pos <节点id> <x> <y> 是画布坐标注释，@link <节点id> <图名> 是下钻到另一张图
+%%! @file <节点id> <路径> 是这个节点对应的源码文件（可带 #符号），一个节点可多条
+%%! 以上对 Mermaid 渲染都无任何影响，可忽略或手改
+%% @summary "DTSeek 决策模型架构：基于 DETR/YOLO 思想的开词表双端解耦决策引擎"
+%% @pos raw_text -178 72
+%% @pos doc_tok -178 167
+%% @pos doc_encoder -178 261
+%% @pos doc_memory -178 361
+%% @pos task_spec 178 72
+%% @pos task_tok 178 167
+%% @pos query_proj 178 261
+%% @pos self_attn 178 470
+%% @pos cross_attn 0 583
+%% @pos task_ffn 0 680
+%% @pos cat_scorer -178 861
+%% @pos conf_head 178 861
+%% @pos calib_layer 0 998
+%% @pos final_output 0 1119
+%% @file doc_encoder "src/dtseek/model.py#DTSeekModel"
+%% @file doc_memory "src/dtseek/pipeline.py#DTSeekEngine"
+%% @file task_spec "src/dtseek/pipeline.py#TaskCartridge"
+%% @file task_tok "src/dtseek/pipeline.py#TaskCartridge"
+%% @file query_proj "src/dtseek/model.py#CategoryQueryProjector"
+%% @file self_attn "src/dtseek/model.py#DETRDecoderLayer"
+%% @file cross_attn "src/dtseek/model.py#DETRDecoderLayer"
+%% @file task_ffn "src/dtseek/model.py#DETRDecoderLayer"
+%% @file cat_scorer "src/dtseek/model.py#DTSeekModel"
+%% @file conf_head "src/dtseek/model.py#DTSeekModel"
+%% @file final_output "src/dtseek/pipeline.py#DTSeekEngine"
+flowchart TD
+  subgraph input_doc["输入文本端 (Doc / Context Input)"]
+    raw_text["任意输入文本 State Text<br/>意图：接收长文本/对话/JSON/代码等任意上下文<br/>原理：与输出任务完全解耦，支持超长文本输入 (4k~8k)"]
+    doc_tok["通用输入分词器 (Doc Tokenizer A)<br/>意图：全覆盖任意语言或中文字符<br/>原理：通用 BPE 词表或 Char/Byte-level 紧凑词表"]
+    doc_encoder["Doc Encoder 文本主干 (100M~200M)<br/>意图：一次前向提取全局稠密语义表征<br/>原理：ModernBERT 或 nanoSeek MLA 结构，低秩压缩 KV 特征"]
+    doc_memory["文本记忆特征图 Memory Cache [B, L_doc, D]<br/>意图：提供可被反复查询的语义向量场<br/>原理：单次前向后缓存，多任务共享，无需重复计算"]
+  end
+  subgraph dynamic_task["动态任务头 / 词表插槽 (Task Cartridge)"]
+    task_spec["任务定义与候选类别集合 (Task Spec)<br/>意图：定义具体问题（Choice/Score/Noul/Span）与类别标签<br/>原理：支持 JSON 描述或自定义专用业务词表"]
+    task_tok["任务分词器 / 预设映射 (Task Tokenizer B)<br/>意图：独立编码类别语义或直接映射预设 ID<br/>原理：结构化专用词表，与输入分词器彻底解耦"]
+    query_proj["类别 Query 生成器 (Category Queries)<br/>意图：将 C 个候选标签映射为 D 维查询向量<br/>原理：[Q_1, Q_2, ..., Q_C] + 常驻背景类 Q_null (防强行归类)"]
+  end
+  subgraph cross_decoder["DETR 风格交叉解码器 (Cross-Decoder Head, 2~3层)"]
+    self_attn["类别间互斥交互 (Self-Attention)<br/>意图：感知候选类别之间的竞态与互斥关系<br/>原理：Query 之间互相交互，具备排他性与排列不变性"]
+    cross_attn["文本跨模态查询 (Cross-Attention)<br/>意图：各类别 Query 主动查询输入文本 Memory<br/>原理：Q 来自任务类别，K/V 来自 doc_memory，提取匹配证据"]
+    task_ffn["任务前馈网络 (Task FFN)<br/>意图：细化分类特征并融合置信度信号<br/>原理：轻量 SwiGLU / MLP，支持挂轻量 LoRA 做任务微调"]
+  end
+  subgraph heads_output["双头输出与校准 (Dual Heads &amp; Calibration)"]
+    cat_scorer["类别打分头 (Category Scorer)<br/>意图：输出每个候选 Query 的分类 Logits<br/>原理：投影输出对应类别的未归一化分数，结合 Q_null 判定有效性"]
+    conf_head["校准与置信度头 (Confidence / Act Head)<br/>意图：输出该决策的可信度与拒识动作<br/>原理：基于 Top1-Top2 差值、熵、特征范数综合回归，防过度自信"]
+    calib_layer["RLCD / 温度校准层 (Calibration)<br/>意图：校准概率分布至真实准确率一致<br/>原理：分桶温度缩放 (Temperature Scaling) 与严格保真准则约束"]
+    final_output["结构化决策结果 (Decision Result)<br/>意图：向外部业务系统交付最终结构化结果<br/>原理：输出命中标签、置信度概率、是否拒识 (None of Above)"]
+  end
+  raw_text --> doc_tok
+  doc_tok --> doc_encoder
+  doc_encoder --> doc_memory
+  task_spec --> task_tok
+  task_tok --> query_proj
+  query_proj --> self_attn
+  doc_memory -->|"Key / Value 缓存"| cross_attn
+  self_attn --> cross_attn
+  cross_attn --> task_ffn
+  task_ffn --> cat_scorer
+  task_ffn --> conf_head
+  cat_scorer --> calib_layer
+  conf_head --> calib_layer
+  calib_layer --> final_output
+  direction TB
+  direction TB
+  direction TB
+  direction TB
