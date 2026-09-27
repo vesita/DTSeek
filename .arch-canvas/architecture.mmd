@@ -31,6 +31,9 @@
 %% @file start_end_ptr "src/dtseek/decoder/robust_ar_model.py#RobustARSliceDecoder"
 %% @file action_head "src/dtseek/decoder/robust_ar_model.py#RobustARSliceDecoder"
 %% @file feedback_proj "src/dtseek/decoder/robust_ar_model.py#RobustARSliceDecoder"
+%% @file mention_ndb "src/dtseek/decoder/mention_ndb.py#MentionNDB"
+%% @file mention_ndb "training/train_task_card.py#--ndb"
+%% @file mention_ndb "scripts/ab_test_ndb.py"
 %% @file final_output "examples/example_multitask.py"
 %% @file renderer "src/dtseek/tasks/runtime.py#render_highlight"
 %% @file multitask_train "training/train_multitask.py#train_multitask"
@@ -57,6 +60,7 @@ flowchart TD
     start_end_ptr["双指针定位头<br/>意图：直接指向原文的起止字符，不回归边界框<br/>原理：Query 与文本记忆做点积，argmax 得到 1-based 闭区间 [start, end]"]
     action_head["动作头：继续 / 收束<br/>意图：让模型自己决定还有没有下一个切片 原理：不预设切片上限；吐「继续」就再发射一个切片，吐「收束」就停下，天然支持 0 到任意多个"]
     feedback_proj["切片状态回填<br/>意图：让下一步知道「我刚圈了哪个词、在哪」<br/>原理：把上一步隐状态 + 类别嵌入 + 归一化位置融合投影，作为下一步输入"]
+    mention_ndb[("情节提及记忆 (NDB)｜意图：让身份槽任务记住「这篇里这个字面刚被指成谁」｜原理：键=提及起始处 1~2 字 n-gram，值=此前分配的身份槽 id；逐样本建空表，只回写模型自己发射过的切片（绝不写真值）；读权重必须离散——软读会把新人物判成已覆盖｜实测：person 重复提及正确率 0.375→0.843（3 seed Δ=+0.469，极差 0.011）；代价 +27.7% 步时（已从 +34.7% 优化，指标逐位不变；门控 backward 单项即 8%，是删不掉的地板）/ +264 参数 / +30MB｜已否证：参数化记忆与可学习 n-gram 表（旁路消融为空壳，全局确定性 key→id 表的贝叶斯上界仅 0.347，低于不做记忆的 base）——关键是「寻址离散」，不是「表参不参数化」")]
   end
   subgraph output["输出与呈现"]
     final_output["结构化锚点<br/>意图：对外只给坐标与类别，不生成任何原文<br/>原理：模型零文本输出 ⇒ 零幻觉；锚点为 1-based 闭区间 + 类别 + 置信度"]
@@ -86,3 +90,6 @@ flowchart TD
   multitask_train --> task_cards
   word_probe --> final_output
   fail_closed --> task_spec
+  decoder -.->|"读：按预测起点检索"| mention_ndb
+  feedback_proj -.->|"写：已发射切片"| mention_ndb
+  mention_ndb -.->|"身份槽类别 logits"| final_output
