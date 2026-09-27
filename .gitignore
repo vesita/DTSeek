@@ -8,3 +8,17 @@ wheels/
 
 # Virtual environments
 .venv
+
+# 模型权重与训练产物（体积大、可复现，不入 git）
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+
+# 训练中间产物
+out/
+logs/
+*.log
+
